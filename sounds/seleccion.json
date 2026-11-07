@@ -1,0 +1,20 @@
+{
+  "schema": "gentle-emote-arcade.sounds/v1",
+  "soundsDir": "sounds",
+  "choices": {
+    "session.started": "aldeanospawn",
+    "agent.started": "priestconversion",
+    "agent.completed": "priestconverted",
+    "agent.failed": "rogan",
+    "agent.cancelled": "malesounddeath5",
+    "agent.attention": "attack",
+    "subagent.queued": "farmexhausted",
+    "subagent.running": "wololo",
+    "subagent.waiting": "interface-population-limit",
+    "subagent.completed": "aldeanospawn",
+    "subagent.failed": "generic-male-death3",
+    "subagent.cancelled": "generic-female-death3",
+    "subagent.timed_out": "generic-siege-weapon-death",
+    "context.high": "interface-town-bell1"
+  }
+}

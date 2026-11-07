@@ -1,0 +1,55 @@
+# gentle-emote-arcade — qué queda fuera del repo
+# Beta AoE publicable: entran los dibujos de emotes/ (set aoe + gemelo aoe-yolo)
+# y los 13 wav configurados de sounds/. El material de trabajo queda afuera.
+# Motivos, listado completo y checklist: docs/BETA.md
+
+# ── Material de trabajo (sigue en disco, no se publica) ──────────────────────
+
+# Audios crudos por juego: 60 mp3 de MyInstants + README.txt por juego.
+# La selección publicada es sounds/ (13 wav + seleccion.json), no esto.
+datas/
+
+# Previews ×8 y recortes de trabajo (60 archivos, ~944 KB).
+previews/
+
+# Lab de sonidos y banco de pruebas del workspace: no son parte del plugin.
+lab/
+test/
+
+# ── Fuentes de referencia ───────────────────────────────────────────────────
+
+# Fuentes crudas de referencia (JPG 1024×1024). La entrega es PNG 48x40.
+*.jpg
+*.jpeg
+# Explícito para el brief de arte (ya cubierto por *.jpg):
+antigravity-pack/refs/*.jpg
+
+# ── Logs de trabajo ─────────────────────────────────────────────────────────
+
+*.log
+logs/
+
+# ── Copias y backups por nombre (el original versionado ya existe) ───────────
+
+*~
+*.bak
+*.orig
+*.rej
+*.tmp
+* copy.*
+* Copy.*
+*(1).*
+*(2).*
+
+# ── Basura de sistema / editor ──────────────────────────────────────────────
+
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+
+# ── Generado al correr scripts/sprites/ (bytecode y caches) ─────────────────
+
+__pycache__/
+*.pyc
