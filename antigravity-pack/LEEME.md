@@ -12,7 +12,7 @@ No generes nada hasta leer los 3. Al terminar devolvé solo PNGs sueltos.
 ## Qué es esto
 Fork `gentle-emote-arcade`: el avatar Gentleman se reemplaza por sprites de Age of Empires que actúan lo mismo que el agente en Gentle Shell, y se complementa con los audios del juego para entender auditivamente qué está haciendo el agente. 24 estados. El set activo es `emotes/aoe/`, su gemelo YOLO es `emotes/aoe-yolo/` (ese lo generamos acá, no lo pidas).
 
-Este brief se publica como documentación del pipeline de arte. En el repo viajan `emotes/` (los dos sets AoE) y `sounds/` (13 wav + `seleccion.json`); `datas/` (mp3 crudos), `previews/` (previews ×8 y recortes) y `lab/` + `test/` quedan fuera por `.gitignore`, aunque siguen en el disco del autor.
+Este brief se publica como documentación del pipeline de arte. En el repo viajan `emotes/` (los dos sets AoE) y `sounds/aoe/` (13 wav + `seleccion.json`); `datas/` (mp3 crudos), `previews/` (previews ×8 y recortes) y `lab/` + `test/` quedan fuera por `.gitignore`, aunque siguen en el disco del autor.
 
 ## Base que no se toca
 - `refs/idle.png` (48×40): el aldeano final. Mismo personaje, misma paleta en todo.

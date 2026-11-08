@@ -1,6 +1,6 @@
 {
   "schema": "gentle-emote-arcade.sounds/v1",
-  "soundsDir": "sounds",
+  "soundsDir": "sounds/aoe",
   "choices": {
     "session.started": "aldeanospawn",
     "agent.started": "priestconversion",

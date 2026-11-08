@@ -10,11 +10,7 @@ Powered by Gentle Shell. Fork de
 [cgxeiji/pi-emote](https://github.com/cgxeiji/pi-emote)— para reemplazar el
 Gentleman por sprites (y sonidos) de videojuegos.
 
-> **Estado: beta AoE.** El set `aoe` tiene `hi`, `think` e `idle` en 48×40 con
-> dos poses, y `tool` y `success` ya tienen arte propio y animado (3 y 2
-> frames, sin placeholder). `starcraft`, `lol` y `cs16` están en desarrollo (solo
-> `emotes.json`, sin frames) y `minecraft` es el próximo set a sumar. Detalle,
-> verificación y checklist de publicación en [`docs/BETA.md`](docs/BETA.md).
+> **Estado: beta y creciendo.** El set `aoe` tiene las 24 escenas con movimiento (74 frames con nombres y gritos extra). `minecraft` y `cs16` ya tienen sus 51 frames dibujados por código; `starcraft` y `lol` tienen pack de audio pero sprites pendientes. Detalle, verificación y checklist en [`docs/BETA.md`](docs/BETA.md).
 
 ## Idea
 
@@ -43,7 +39,7 @@ Age of Empires II es el primer juego cerrado y el único publicable hoy:
 - **Elenco**: aldeano (base), monje (conversión), caballería exploradora,
   ariete, herrera, guardián, rey, elefante, aldeana tejedora, castillo.
 - **Audio**: 14 eventos de Gentle Shell mapeados a 13 wav de AoE
-  (`sounds/seleccion.json`), con el porqué de cada elección en el mapa.
+  (`sounds/aoe/seleccion.json`), con el porqué de cada elección en el mapa.
 - **Pendiente para salir de beta**: completar la segunda pose de las 16
   escenas que todavía tienen una sola.
 
@@ -53,8 +49,15 @@ Age of Empires II es el primer juego cerrado y el único publicable hoy:
 | `aoe-yolo` | AoE II, gemelo YOLO | generado desde `aoe` (ver [`emotes/aoe-yolo/README.md`](emotes/aoe-yolo/README.md)) |
 | `starcraft`, `starcraft-yolo` | StarCraft | en desarrollo: solo `emotes.json` |
 | `lol`, `lol-yolo` | League of Legends | en desarrollo: solo `emotes.json` |
-| `cs16`, `cs16-yolo` | Counter-Strike 1.6 | en desarrollo: solo `emotes.json` |
-| `minecraft`, `minecraft-yolo` | Minecraft | a sumar: todavía sin `emotes.json` ni frames |
+| `cs16`, `cs16-yolo` | Counter-Strike 1.6 | **sprites listos**: 51 frames por código (CT, pollo, C4, AWP) |
+| `starcraft`, `starcraft-yolo` | StarCraft | en desarrollo: solo `emotes.json` |
+| `minecraft`, `minecraft-yolo` | Minecraft | **sprites listos**: 51 frames por código (Steve, Enderman, Creeper, Golem) |
+
+## Homenaje, sin afán de lucro
+
+Este proyecto existe para **honrar los viejos juegos** que nos formaron: que el aldeano, el `wololo`, el cohete o el `locknload` sigan vivos al lado del prompt. No hay ni habrá venta, suscripción, publicidad ni recaudación de ningún tipo alrededor de este repo: es un homenaje personal y experimental, hecho por fans.
+
+Los sprites son dibujos originales generados por código; los sonidos son efectos de sus respectivos juegos y pertenecen a sus dueños. Si algún titular nos dice «cuidadito con los sonidos», los retiramos del repo el mismo día y dejamos solo los mapas y los generadores. Ver el aviso completo en [Créditos y aviso](#créditos-y-aviso).
 
 ## Galería
 
@@ -78,7 +81,7 @@ en [Sonido ↔ Sprite](#sonido--sprite)).
 
 | Estado | Qué se ve | Momento del agente |
 |---|---|---|
-| `hi` | Monje saliendo del monasterio | Sesión arranca |
+| `hi` | Aldeano saludando con la mano en alto | Sesión arranca |
 | `idle` | Aldeano parado junto a la granja | Esperando input |
 | `think` | Sacerdote con mano en la barbilla, polvillo de fe | El modelo razona |
 | `talk` | Aldeano respondiendo | El modelo responde |
@@ -117,7 +120,11 @@ día sin escribir nada.
 
 ### Frames EXTRA con texto
 
-Tres frames llevan texto en pantalla y son **EXTRA**: se suman a la animación
+Cada estado suma además un frame EXTRA con su **nombre** en dorado
+(`read_03` dice READ, `jobs_03` dice JOBS, etc.), para que cada secuencia
+diga qué está haciendo sin quitar arte.
+
+Tres frames llevan gritos célebres y son **EXTRA**: se suman a la animación
 del estado, no reemplazan el arte base.
 
 | Estado | Frame | Texto |
@@ -125,6 +132,9 @@ del estado, no reemplazan el arte base.
 | `think` | `think_04.png` | WOLOLO |
 | `failure` | `failure_03.png` | ROGAN? |
 | `hi` | `hi_03.png` | HELLO. |
+| `yolo` | `yolo_03.png` | YOLO |
+| `super-yolo` | `super-yolo_03.png` | SUPER YOLO |
+| 17 estados | `<estado>_0N.png` | nombre del estado (READ, JOBS, …) |
 
 El arte base de esos estados sigue siendo `think_01`/`think_02`,
 `failure_01`/`failure_02` y `hi_01`/`hi_02`. La galería usa `think_04`
@@ -138,14 +148,14 @@ base.
 
 ## Roadmap
 
-1. **Ahora — beta AoE**: tanda completa con movimiento (24/24); pulir `frameMs` y sumar taunts como frames extra.
-2. **Sonido AoE**: la selección v2 está en `sounds/`, pero todavía no está
+1. **Ahora — sets con movimiento**: `aoe` (74 frames), `minecraft` y `cs16` (51 cada uno) ya animados; pulir `frameMs` y sumar taunts como frames extra.
+2. **Sonido AoE**: la selección v2 está en `sounds/aoe/` pero todavía no está
    aplicada en la config viva de Gentle Shell (`notifications.json`); aplicarla
    con backup es un paso aparte, ver `docs/BETA.md`.
-3. **Siguiente — StarCraft, LoL y CS 1.6**: ya tienen `emotes.json` y el mapa
-   de escenas; faltan los frames y el cierre de la selección de audio.
-4. **Después — Minecraft**: sumar set, mapa de escenas y audio.
-5. Licencia y remoto: ver checklist en `docs/BETA.md`.
+3. **Sprites StarCraft y LoL**: ya tienen `emotes.json`, mapa de escenas y pack de audio; faltan los frames (hay generadores de ejemplo en `scripts/sprites/`).
+4. **Minecraft**: sprites listos; falta mapa de escenas propio y probar el pack en vivo.
+5. Licencia y remoto: ver checklist en `docs/BETA.md`. Incluye decidir qué
+   pasa con los mp3 sin licencia verificada de StarCraft y LoL.
 
 ## Estructura
 
@@ -162,12 +172,18 @@ gentle-emote-arcade/
 │   ├── aoe-yolo/            # gemelo generado de aoe
 │   ├── starcraft/ …         # sets en desarrollo (solo emotes.json)
 │   └── cs16/
-├── sounds/                  # 13 wav de AoE + seleccion.json (evento → sonido)
+├── sounds/                  # un pack por juego: audios + seleccion.json
+│   ├── aoe/                 # 13 wav + seleccion.json (14 eventos)
+│   ├── minecraft/           # 13 mp3 + seleccion.json
+│   ├── cs16/                # 12 wav + seleccion.json
+│   ├── starcraft/           # 14 mp3 curados de datas + seleccion.json
+│   └── lol/                 # 14 mp3 curados de datas + seleccion.json
 ├── docs/                    # BETA.md y mapas de escenas por juego
 │   └── scenes/              # galería ×4 (192×160) de las 24 escenas, solo README
 ├── scripts/
 │   ├── sprites/             # generadores de PNG por código
-│   └── scenes_gallery.py    # galería ×4: emotes/aoe/ → docs/scenes/
+│   ├── scenes_gallery.py    # galería ×4: emotes/aoe/ → docs/scenes/
+│   └── select_game.sh       # cambia sprites + sonidos al juego elegido
 └── antigravity-pack/        # brief de arte: LEEME, TANDA, FUENTES y refs
 ```
 
@@ -188,34 +204,59 @@ crudos de trabajo, `previews/` con los previews ×8 y recortes, y `lab/` +
 ## Sonidos
 
 `emotes.json` define solo el timing de los sprites; los sonidos van por otro
-canal. `sounds/` es la selección AoE publicada:
+canal. Cada juego tiene su pack en `sounds/<juego>/`: los audios con nombres
+cortos y un `seleccion.json` portable (schema
+`gentle-emote-arcade.sounds/v1`) que mapea los 14 eventos a un nombre sin
+extensión. `scripts/select_game.sh <juego>` cambia sprites y sonidos juntos.
+
+### Packs de sonido
+
+| Juego | Carpeta | Audio | Estado del audio | Sprites |
+|---|---|---|---|---|
+| Age of Empires II | `sounds/aoe/` | 13 wav (2,9 MB) | **completo**: 14 eventos, selección v2 | **beta**: 24 escenas |
+| Minecraft | `sounds/minecraft/` | 13 mp3 (568 KB) | **descargado**: 14 eventos, sin probar en vivo | a sumar |
+| Counter-Strike 1.6 | `sounds/cs16/` | 12 wav (405 KB) | **descargado**: 14 eventos, sin probar en vivo | en desarrollo (solo `emotes.json`) |
+| StarCraft | `sounds/starcraft/` | 14 mp3 (408 KB) | **curado de `datas/starcraft/`**: un archivo por evento | en desarrollo (solo `emotes.json`) |
+| League of Legends | `sounds/lol/` | 14 mp3 (583 KB) | **curado de `datas/lol/`**: un archivo por evento | en desarrollo (solo `emotes.json`) |
+
+**Aviso de licencia**: los mp3 de `sounds/starcraft/` y `sounds/lol/` son
+copias curadas de `datas/`, elegidas por nombre entre hallazgos de MyInstants
+**sin licencia verificada**. Sirven para pruebas locales; no hay permiso
+confirmado para redistribuirlos. Sus `seleccion.json` son portables, pero los
+audios heredan esa duda: antes de publicar hay que decidir si se quitan o se
+reemplazan por material con permiso (ver `docs/BETA.md`).
+
+La selección AoE publicada, en detalle:
 
 - **13 wav únicos** (2,9 MB) para **14 eventos**: `aldeanospawn` se usa dos
   veces (`session.started` y `subagent.completed`), así que no hay duplicados
   de archivo.
-- `sounds/seleccion.json` guarda el mapeo `evento → archivo` en `choices`
-  (portable, es el que se lee) y en `events`/`audioDir` las rutas absolutas de
-  la máquina donde se generó.
+- `sounds/aoe/seleccion.json` guarda el mapeo `evento → archivo` en `choices`
+  (portable: solo nombres sin extensión, relativos a `soundsDir`).
 
 El mapa evento → sonido está en [Sonido ↔ Sprite](#sonido--sprite).
 
-Para usar los sonidos en otra máquina hay que reescribir las entradas `file:`
-de `events` (o regenerar el `seleccion.json` desde el lab) apuntando a la copia
-local de `sounds/`, y aplicar el resultado a la config de notificaciones de
-Gentle Shell (`~/.gentle-shell/config/gentle-ai/notifications.json`).
-**Hoy esa config todavía no recibió esta selección**: sigue apuntando a los
+Para usar los sonidos en otra máquina alcanza con copiar `sounds/<juego>/` y
+aplicar su `seleccion.json` (portable, solo nombres) a la config de
+notificaciones de Gentle Shell
+(`~/.gentle-shell/config/gentle-ai/notifications.json`).
+`scripts/select_game.sh <juego>` hace backup y escribe las rutas `file:`
+resolviendo la carpeta del pack.
+**Hoy esa config todavía no recibió la selección AoE**: sigue apuntando a los
 archivos de `waw/` (v1). Aplicarla es un paso aparte, con backup — ver
 [`docs/BETA.md`](docs/BETA.md).
 
-Los mp3 crudos de los que salió esta selección (`datas/<juego>/`, 60 archivos)
-no se publican: no son el entregable y cambian con cada tanda.
+Los mp3 crudos de los que salieron los packs viven en `datas/<juego>/` (20 por
+juego, 60 en total) y no se publican: cambian con cada tanda. Lo que viaja en el
+árbol es la copia corta de `sounds/<juego>/` (con la duda de licencia de
+arriba), sin los nombres de origen.
 
 ## Sonido ↔ Sprite
 
 Cada serie de eventos de Gentle Shell dispara su propio sonido —`session.*`,
 `agent.*`, `subagent.*`, `context.*`— y el sprite de esa misma escena lo
 acompaña: imagen y audio cuentan el mismo momento. El mapa vigente sale de
-`sounds/seleccion.json` (`choices`), 14 eventos sobre 13 wav:
+`sounds/aoe/seleccion.json` (`choices`), 14 eventos sobre 13 wav:
 
 | Evento | Sonido |
 |---|---|
@@ -255,7 +296,7 @@ acompaña: imagen y audio cuentan el mismo momento. El mapa vigente sale de
 
    Cambiá `"aoe"` por `"aoe-yolo"`, `"starcraft"`, `"lol"` o `"cs16"` según el set.
 3. `/reload` y `/emote demo` para ver las escenas.
-4. Audio (opcional): copiar `sounds/` a una carpeta estable, apuntar ahí las
+4. Audio (opcional): copiar `sounds/aoe/` a una carpeta estable, apuntar ahí las
    rutas `file:` de `seleccion.json` y aplicar el mapa a la config de
    notificaciones de Gentle Shell.
 
@@ -314,11 +355,14 @@ Advertencias verificadas en el código actual:
   [efolchmontiel/gentle-emote](https://github.com/efolchmontiel/gentle-emote).
 - Frames: pixel art generado por `scripts/sprites/*.py` (48×40 RGBA).
 - Galería del README: `scripts/scenes_gallery.py` (×4 desde esos frames).
-- Audios: efectos de sonido de Age of Empires II, recopilados de MyInstants.
+- Audios: efectos de sonido de Age of Empires II, StarCraft, League of Legends,
+  Counter-Strike 1.6 y Minecraft, recopilados de MyInstants. Los mp3 de
+  StarCraft y LoL salen de `datas/` y no tienen licencia verificada: solo
+  pruebas locales.
 - Personajes, nombres y audios de los juegos pertenecen a sus respectivos
   dueños (Microsoft, Blizzard, Riot Games, Valve, Mojang). Proyecto personal y
   experimental, sin relación con ellos.
-- Sin `LICENSE` todavía: por defecto, todos los derechos reservados.
+- Licencia MIT (`LICENSE`, 2026): cubre código, sprites generados, galería y mapas. Los audios y marcas de los juegos **no** entran en esa licencia (ver aviso arriba).
 - Los JPG crudos de referencia, los mp3 de trabajo, los previews y los logs no
   se versionan (ver [`.gitignore`](.gitignore)).
 

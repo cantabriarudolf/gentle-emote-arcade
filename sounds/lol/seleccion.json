@@ -1,0 +1,20 @@
+{
+  "schema": "gentle-emote-arcade.sounds/v1",
+  "soundsDir": "sounds/lol",
+  "choices": {
+    "session.started": "first-blood",
+    "agent.started": "rammus-ok",
+    "agent.completed": "penta-kill",
+    "agent.failed": "ally-slain",
+    "agent.cancelled": "what-was-that-move",
+    "agent.attention": "missing",
+    "subagent.queued": "ping-push",
+    "subagent.running": "triple-kill",
+    "subagent.waiting": "ping-enemy-missing",
+    "subagent.completed": "quadra-kill",
+    "subagent.failed": "enemy-penta",
+    "subagent.cancelled": "seraphineult",
+    "subagent.timed_out": "defeat",
+    "context.high": "ping-caution"
+  }
+}

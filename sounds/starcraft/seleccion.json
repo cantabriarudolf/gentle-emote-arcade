@@ -1,0 +1,20 @@
+{
+  "schema": "gentle-emote-arcade.sounds/v1",
+  "soundsDir": "sounds/starcraft",
+  "choices": {
+    "session.started": "hell-its-about-time",
+    "agent.started": "scv-orders-received",
+    "agent.completed": "marine-good-to-go",
+    "agent.failed": "base-attack",
+    "agent.cancelled": "easy-thrusters",
+    "agent.attention": "need-a-light",
+    "subagent.queued": "orders-captain",
+    "subagent.running": "protoss-fighting",
+    "subagent.waiting": "medic-terrain",
+    "subagent.completed": "operational",
+    "subagent.failed": "life-for-aiur",
+    "subagent.cancelled": "exterminator",
+    "subagent.timed_out": "overtime",
+    "context.high": "all-hands"
+  }
+}

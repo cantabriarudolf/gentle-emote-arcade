@@ -1,0 +1,20 @@
+{
+  "schema": "gentle-emote-arcade.sounds/v1",
+  "soundsDir": "sounds/minecraft",
+  "choices": {
+    "session.started": "chest",
+    "agent.started": "villager-yes",
+    "agent.completed": "levelup",
+    "agent.failed": "anvil",
+    "agent.cancelled": "villager-ambient",
+    "agent.attention": "bell",
+    "subagent.queued": "villager-yes",
+    "subagent.running": "teleport",
+    "subagent.waiting": "cave",
+    "subagent.completed": "xp-orb",
+    "subagent.failed": "death",
+    "subagent.cancelled": "villager-ambient",
+    "subagent.timed_out": "creeper",
+    "context.high": "advancement"
+  }
+}

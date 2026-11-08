@@ -1,0 +1,20 @@
+{
+  "schema": "gentle-emote-arcade.sounds/v1",
+  "soundsDir": "sounds/cs16",
+  "choices": {
+    "session.started": "locknload",
+    "agent.started": "go",
+    "agent.completed": "ctwin",
+    "agent.failed": "terwin",
+    "agent.cancelled": "fallback",
+    "agent.attention": "enemys",
+    "subagent.queued": "roger",
+    "subagent.running": "reloading",
+    "subagent.waiting": "c4beep",
+    "subagent.completed": "ctwin",
+    "subagent.failed": "negative",
+    "subagent.cancelled": "fallback",
+    "subagent.timed_out": "getout",
+    "context.high": "bombdef"
+  }
+}
