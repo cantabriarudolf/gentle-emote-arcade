@@ -7,8 +7,7 @@ resto del material de trabajo queda afuera por `.gitignore` (sigue en disco).
 
 ## Resumen
 
-- **`aoe` está en beta**: `hi`, `think` e `idle` ya son frames nuevos 48×40 de
-  dos poses. `tool` y `success` siguen con un frame placeholder y se rehacen.
+- **`aoe` está en beta**: los 24 estados ya son arte propio 48×40 con movimiento (2-4 poses en loop, frames con texto extra en `think`, `failure`, `hi`, `yolo`, `super-yolo`).
 - **`aoe-yolo` está generado** desde `aoe` (gemelo YOLO / Super-YOLO).
 - **`starcraft`, `lol`, `cs16` (+ sus `-yolo`) están en desarrollo**: solo
   `emotes.json`, cero frames. **`minecraft` es el próximo set a sumar**: no
@@ -31,25 +30,25 @@ detalle del porqué, evento por evento, está en
 
 | Set | Frames | `emotes.json` | Estado |
 |---|---|---|---|
-| `aoe` | 33 PNG en 24 carpetas | sí | **beta** |
-| `aoe-yolo` | 33 PNG en 24 carpetas | sí (idéntico a `aoe`) | generado, hereda |
+| `aoe` | 57 PNG en 24 carpetas | sí | **beta** |
+| `aoe-yolo` | 57 PNG en 24 carpetas | sí (idéntico a `aoe`) | generado, hereda |
 | `starcraft` / `starcraft-yolo` | 0 | sí | en desarrollo |
 | `lol` / `lol-yolo` | 0 | sí | en desarrollo |
 | `cs16` / `cs16-yolo` | 0 | sí | en desarrollo |
 | `minecraft` / `minecraft-yolo` | 0 | no | a sumar |
 
-## Frames de `aoe` (33 PNG)
+## Frames de `aoe` (57 PNG, todos con movimiento salvo indicación)
 
 | Estado | Frames | Situación |
 |---|---|---|
-| `hi` | `hi_01.png`, `hi_02.png` | **nuevo** 48×40 |
-| `think` | `think_01.png`, `think_02.png` | **nuevo** 48×40 |
-| `idle` | `idle.png`, `idle_blink.png` | **nuevo** 48×40 (aldeano); `blink` es el mismo bitmap que `idle` (parpadeo pendiente) |
-| `talk` | `talk_close`, `talk_small`, `talk_mid`, `talk_wide`, `talk` | 5 bocas con pesos; `talk_mid` es idéntico a `talk` |
-| `yolo`, `super-yolo` | 2 + 2 | heredados; `*_blink` copia de `idle` |
-| **`tool`** | `tool.png` | **a rehacer**: 1 placeholder (ariete) |
-| **`success`** | `success.png` | **a rehacer**: 1 placeholder (monje + convertido) |
-| `ask`, `build`, `bye`, `compact`, `delegate`, `explore`, `failure`, `grandma`, `jira`, `jobs`, `judge`, `read`, `remember`, `review`, `verify`, `write` | 1 c/u | placeholder de una pose: falta la tanda de 2 poses |
+| `hi` | `hi_01.png`, `hi_02.png`, `hi_03.png` | **nuevo** 48×40; `hi_03` dice HELLO. (frame extra) |
+| `think` | `think_01..04.png` | **nuevo** 48×40; cura con WOLOLO (`think_04` con texto, frame extra) |
+| `idle` | `idle.png`, `idle_blink.png` | **nuevo** 48×40 (aldeano + parpadeo) |
+| `talk` | `talk_close`, `talk_small`, `talk_mid`, `talk_wide` | 4 bocas con pesos |
+| `yolo`, `super-yolo` | 3 + 3 | con texto (`yolo_03`, `super-yolo_03`, frames extra) |
+| **`tool`** | `tool_01..03.png` | **nuevo** 48×40 (ariete 3 tiempos) |
+| **`success`** | `success_01.png`, `success_02.png` | **nuevo** 48×40 (festejo) |
+| `ask`, `build`, `bye`, `compact`, `delegate`, `explore`, `failure`, `grandma`, `jira`, `jobs`, `judge`, `read`, `remember`, `review`, `verify`, `write` | 2 c/u (`failure` 3 con ROGAN?) | arte propio con movimiento |
 
 Referencia de la tanda completa de las 24 escenas:
 [`../antigravity-pack/TANDA.md`](../antigravity-pack/TANDA.md).
@@ -205,10 +204,7 @@ contenido.
 
 - `tool`: ariete + aldeanos, 2 poses (01 ariete atrás, 02 adelante).
 - `success`: monje + unidad convertida de rodillas, 2 poses.
-- Completar las 16 escenas que hoy tienen una sola pose (ver `TANDA.md`).
-- `idle_blink` real (hoy es copia de `idle`).
-- `emotes.json`: `tool` y `success` están en `cycle: loop`; si quedan de 2
-  poses, revisar `frameMs` (`tool` 260 ms, `success` 420 ms).
+- Revisar `frameMs` de `tool` (260 ms) y `success` (420 ms) con las poses nuevas.
 - Sets `starcraft`, `lol`, `cs16`: faltan los frames; `emotes.json` ya está.
 - `minecraft`: falta todo (set, `emotes.json`, mapa de escenas y audio).
 

@@ -28,3 +28,6 @@
 24. `bye/` — aldeano sacándose sombrero. 01 puesto, 02 en mano.
 
 `aoe-yolo/` no se pide: se duplica acá con `scripts/sprites/gen_aoe_yolo.py`.
+
+## Encuadre (de las originales del proyecto)
+Cuerpo entero siempre visible, de cabeza a pies, centrado, de frente o 3/4. El personaje ocupa el alto del cuadro con poco margen (el bastón del monje entra vertical justo). Fondo transparente, sin recortes de pies/cabeza/bastón.

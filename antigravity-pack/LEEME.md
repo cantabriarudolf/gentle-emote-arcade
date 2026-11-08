@@ -32,10 +32,10 @@ Este brief se publica como documentación del pipeline de arte. En el repo viaja
 - Secundarios cotejados en la wiki (ver `FUENTES.md`): Scout a caballo, Ariete + aldeanos, Herrero, Guardián/Campeón con escudo, Rey con mazo, Elefante, Aldeana tejiendo, Castillo + cohete madera.
 
 ## Tanda a entregar
-Ver `TANDA.md`: los 24 estados con sus 2 poses c/u. Reemplaza los placeholder actuales de `emotes/aoe/`.
+Ver `TANDA.md`: los 24 estados con sus poses c/u. Ya instalados con movimiento.
 
 ## Dónde cotejar formas (si dudás de un personaje, mirá acá antes de inventar)
 Ver `FUENTES.md` con links exactos a Fandom, Sprites, ModDB y qué descargar de cada uno.
 
 ## Qué mirar antes de redibujar `tool` y `success`
-Las entregas anteriores de esas dos escenas viven en `previews/` (`tool_01_preview.png`, `tool_02_preview.png`, `success_01_preview.png`, `success_02_preview.png`). No se publican: están solo en el disco del autor. Los frames instalados hoy son placeholder de una pose, así que antes de redibujar conviene mirar esos previews.
+Las entregas anteriores de esas dos escenas viven en `previews/` (`tool_01_preview.png`, `tool_02_preview.png`, `success_01_preview.png`, `success_02_preview.png`). No se publican: están solo en el disco del autor.
