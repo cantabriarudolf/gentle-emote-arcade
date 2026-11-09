@@ -1,34 +1,50 @@
 #!/usr/bin/env python3
-"""Dibuja por codigo los estados del ALDEANO de AoE II (48x40, 8-bit RGBA).
+"""Dibuja por codigo los estados del ALDEANO de AoE (48x40, 8-bit RGBA).
 
-Base visual: `antigravity-pack/refs/raw_idle.jpg` y
-`antigravity-pack/refs/ref-villager-moddb.png` (aldeano con sombrero de paja,
-tunica marron con cinturon y botas). Un solo personaje y una sola paleta: cada
-pose solo mueve brazos, boca, sombrero y accesorios de la escena.
+Base visual: referencia del aldeano musculoso de AoE I, vista frontal: torso
+desnudo y piel clara, pelo marron medio, barba corta, pantalon azul holgado,
+cinturon marron trenzado con hebilla plateada y brazaletes trenzados en los
+antebrazos. Sin sombrero, sin tunica y sin botas: los pies van descalzos. Un
+solo personaje y una sola paleta: cada pose solo mueve brazos, boca y los
+accesorios de la escena. La abuela (`grandma`) es el otro personaje del set y
+conserva su tunica larga y su panuelo.
 
 El cuerpo entero se dibuja en una capa y se pega con un unico contorno de 1 px
 (dilatacion del alfa): silueta limpia de sprite clasico, sin brochazos, con
 sombreado interno para separar brazos, cinturon y pliegues.
 
-Estados que genera (carpeta dentro de `emotes/aoe/`):
+Estados que genera (carpeta dentro de `emotes/aoe/`), con los nombres exactos
+que hay en el set (`_03` repite la pose 1: son frames que ya estaban en el
+ciclo y no se borran):
 
-    hi/         hi_01, hi_02                     saludo (mano arriba / abajo)
+    hi/         hi_01, hi_02, hi_03              saludo (mano arriba / abajo)
     idle/       idle, idle_blink                 parpadeo del mismo aldeano
     talk/       talk_close, talk_small,
                 talk_mid, talk_wide, talk        cuatro bocas + neutral
-    ask/        ask_01, ask_02                   globo Y / globo N
-    success/    success_01, success_02           brazos arriba / brazos afuera
-    failure/    failure_01, failure_02           caido de frente / de espaldas
-    bye/        bye_01, bye_02                   sombrero puesto / en la mano
-    jobs/       jobs_01, jobs_02                 tomando mate / mirando la barra
-    yolo/       yolo_01, yolo_02                 vincha magenta + cohete (izq/der)
-    super-yolo/ super-yolo_01, super-yolo_02     igual + sol
-    grandma/    grandma_01, grandma_02           aldeana tejiendo (manos arriba/abajo)
-    write/      write_01, write_02               martillo arriba / abajo
+    ask/        ask_01, ask_02, ask_03           globo Y / globo N
+    success/    success_01, success_02,
+                success_03                       brazos arriba / brazos afuera
+    failure/    down_01, down_02, down_03        caido de frente / de espaldas
+    bye/        bye_01, bye_02, bye_03           saludo arriba / de espaldas
+    jobs/       jobs_01, jobs_02, jobs_03        tomando mate / mirando la barra
+    grandma/    grandma_01, grandma_02,
+                grandma_03                       aldeana tejiendo (manos arriba/abajo)
+    write/      write_01, write_02, write_03     martillo arriba / abajo
+
+Los estados de escena que no son aldeanos ya no viven aca: `explore` (camello
+arquero) lo dibuja `gen_explore_aoe.py`, `build`, `jira` y `review` los dibuja
+`gen_build_aoe.py`, y `yolo` / `super-yolo` (el auto cobra) los dibuja
+`gen_yolo_aoe.py`. Los tres reusan las primitivas y la paleta de este modulo.
 
 Solo stdlib (struct + zlib): no usa PIL ni red. Uso, desde la raiz del repo:
 
     python3 gentle-emote-arcade/scripts/sprites/gen_aldeano.py
+    python3 gentle-emote-arcade/scripts/sprites/gen_aldeano.py --set aoe-yolo
+
+El set por defecto es `emotes/aoe`; `--set aoe-yolo` reescribe el gemelo YOLO
+con el mismo dibujo. Los nombres de archivo son exactamente los del set, sin
+alias nuevos: correr el script no agrega ni borra PNG (tampoco los de las
+escenas que ahora dibujan los otros generadores).
 
 Al final verifica el IHDR de cada PNG (48x40, bit depth 8, color type 6,
 interlace 0), que haya alfa real (0 y 255) y que las dos poses del ciclo no
@@ -37,6 +53,7 @@ sean el mismo bitmap; imprime la lista `estado: frames y bytes`.
 
 import os
 import struct
+import sys
 import zlib
 
 W, H = 48, 40
@@ -44,39 +61,63 @@ W, H = 48, 40
 ROOT = os.path.abspath(
     os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "..")
 )
-SET_DIR = os.path.join(ROOT, "emotes", "aoe")
 
-# Guarda: si la ruta no es el set `emotes/aoe` del repo, no escribe nada.
+# Sets que comparten este dibujo: `aoe` y su gemelo YOLO. Cualquier otro
+# nombre se rechaza, asi el script nunca escribe fuera de emotes/<set>/.
+SETS = ("aoe", "aoe-yolo")
+
+
+def set_elegido(argv):
+    """Nombre del set a escribir: `--set aoe` (defecto) o `--set aoe-yolo`."""
+    nombre = "aoe"
+    resto = list(argv)
+    if "--set" in resto:
+        i = resto.index("--set")
+        if i + 1 >= len(resto):
+            raise SystemExit("--set necesita un valor: %s" % " | ".join(SETS))
+        nombre = resto[i + 1]
+    if nombre not in SETS:
+        raise SystemExit(
+            "set desconocido: %s (permitidos: %s)" % (nombre, ", ".join(SETS))
+        )
+    return nombre
+
+
+SET_NAME = set_elegido(sys.argv[1:])
+SET_DIR = os.path.join(ROOT, "emotes", SET_NAME)
+
+# Guarda: si la ruta no es el set pedido del repo, no escribe nada.
 if not os.path.isfile(os.path.join(SET_DIR, "emotes.json")):
     raise SystemExit(
-        "no encuentro emotes/aoe/emotes.json en %s: correr el script desde "
-        "gentle-emote-arcade/" % SET_DIR
+        "no encuentro emotes/%s/emotes.json en %s: correr el script desde "
+        "gentle-emote-arcade/" % (SET_NAME, SET_DIR)
     )
 
 # ── Paleta (una sola para todo el set) ──────────────────────────────────────
 OUT = (26, 18, 12)          # contorno
-HAT = (200, 166, 96)        # paja
-HAT_L = (226, 194, 122)
-HAT_D = (160, 126, 66)
-HAT_BAND = (74, 50, 30)
-SKIN = (232, 178, 138)
-SKIN_L = (246, 208, 172)
-SKIN_D = (198, 138, 100)
-HAIR = (74, 48, 28)
-HAIR_L = (108, 74, 44)
+SKIN = (240, 196, 158)      # piel clara del aldeano
+SKIN_L = (252, 222, 190)
+SKIN_D = (198, 148, 112)
+HAIR = (110, 74, 40)        # pelo marron medio
+HAIR_L = (148, 106, 62)
+BEARD = (96, 62, 34)        # barba corta
+BEARD_D = (74, 46, 24)
 HAIR_G = (198, 196, 188)    # canas de la abuela
 HAIR_G_D = (148, 146, 140)
-TUNIC = (126, 92, 52)
+TUNIC = (126, 92, 52)       # tunica de la abuela (ya no del aldeano)
 TUNIC_L = (152, 114, 66)
 TUNIC_D = (96, 68, 36)
-BELT = (58, 40, 26)
-BUCKLE = (216, 182, 88)
-PANTS = (92, 68, 42)
-PANTS_D = (68, 50, 30)
-PANTS_L = (110, 82, 52)
-BOOT = (56, 38, 24)
-BOOT_L = (84, 58, 34)
-BOOT_D = (40, 26, 16)
+BELT = (124, 84, 44)        # cinturon trenzado
+BELT_L = (162, 118, 66)
+BELT_D = (88, 58, 30)
+BUCKLE = (198, 204, 216)    # hebilla plateada
+BUCKLE_D = (140, 148, 164)
+BRACER = (132, 90, 50)      # brazaletes trenzados
+BRACER_L = (172, 124, 74)
+BRACER_D = (92, 60, 32)
+PANTS = (58, 88, 152)       # pantalon azul holgado
+PANTS_L = (88, 122, 186)
+PANTS_D = (38, 60, 112)
 LIP = (152, 94, 74)
 MOUTH = (104, 50, 42)
 TEETH = (240, 228, 202)
@@ -88,8 +129,8 @@ GREEN_L = (128, 196, 106)
 RED = (186, 66, 54)
 YELLOW = (240, 202, 92)
 YELLOW_D = (198, 156, 52)
-MAGENTA = (232, 62, 152)
-MAGENTA_D = (168, 34, 106)
+MAGENTA = (232, 62, 152)     # marca YOLO (calcomania del auto cobra)
+MAGENTA_D = (176, 34, 108)
 GREY = (186, 190, 200)
 GREY_D = (124, 128, 140)
 STEEL = (208, 212, 222)
@@ -206,29 +247,79 @@ def pegar(dst, src, contorno=OUT):
 
 
 # ── Partes del aldeano (se dibujan todas en la misma capa) ─────────────────
-def dib_piernas(c, dx=0):
-    box(c, 20 + dx, 28, 22 + dx, 33, PANTS)
-    box(c, 25 + dx, 28, 27 + dx, 33, PANTS)
-    box(c, 20 + dx, 29, 20 + dx, 33, PANTS_D)
-    box(c, 27 + dx, 29, 27 + dx, 33, PANTS_D)
-    for y in (30, 32):
-        px(c, 21 + dx, y, PANTS_L)
-        px(c, 26 + dx, y, PANTS_L)
-    # botas
-    box(c, 19 + dx, 34, 22 + dx, 37, BOOT)
-    box(c, 25 + dx, 34, 28 + dx, 37, BOOT)
-    box(c, 19 + dx, 34, 22 + dx, 34, BOOT_L)
-    box(c, 25 + dx, 34, 28 + dx, 34, BOOT_L)
-    px(c, 20 + dx, 35, BOOT_L)
-    px(c, 26 + dx, 35, BOOT_L)
-    box(c, 19 + dx, 37, 22 + dx, 37, BOOT_D)
-    box(c, 25 + dx, 37, 28 + dx, 37, BOOT_D)
+def dib_piernas(c, dx=0, falda=False):
+    """Pantalon azul holgado del aldeano o pollera larga de la abuela."""
+    if falda:
+        # pollera larga: tapa el pantalon y deja los pies descalzos a la vista
+        box(c, 19 + dx, 28, 28 + dx, 33, TUNIC)
+        box(c, 19 + dx, 28, 28 + dx, 28, TUNIC_L)
+        box(c, 19 + dx, 33, 28 + dx, 33, TUNIC_D)
+        box(c, 19 + dx, 28, 19 + dx, 33, TUNIC_D)
+        box(c, 28 + dx, 28, 28 + dx, 33, TUNIC_D)
+        for x in (21, 23, 25, 27):
+            px(c, x + dx, 30, TUNIC_D)
+            px(c, x + dx, 31, TUNIC_L)
+    else:
+        # piernas: dos bloques anchos separados por una linea en sombra
+        box(c, 20 + dx, 28, 23 + dx, 33, PANTS)
+        box(c, 24 + dx, 28, 27 + dx, 33, PANTS)
+        box(c, 23 + dx, 28, 24 + dx, 33, PANTS_D)
+        box(c, 20 + dx, 28, 20 + dx, 33, PANTS_D)
+        box(c, 27 + dx, 28, 27 + dx, 33, PANTS_D)
+        box(c, 21 + dx, 29, 22 + dx, 29, PANTS_L)
+        box(c, 25 + dx, 29, 26 + dx, 29, PANTS_L)
+        px(c, 21 + dx, 32, PANTS_D)     # pliegues de la tela holgada
+        px(c, 26 + dx, 32, PANTS_D)
+    # pies descalzos (el aldeano ya no usa botas)
+    box(c, 19 + dx, 34, 23 + dx, 36, SKIN)
+    box(c, 24 + dx, 34, 28 + dx, 36, SKIN)
+    box(c, 19 + dx, 36, 23 + dx, 36, SKIN_D)
+    box(c, 24 + dx, 36, 28 + dx, 36, SKIN_D)
+    box(c, 20 + dx, 34, 22 + dx, 34, SKIN_L)
+    box(c, 25 + dx, 34, 27 + dx, 34, SKIN_L)
+    px(c, 22 + dx, 35, SKIN_D)          # dedos
+    px(c, 27 + dx, 35, SKIN_D)
 
 
-def dib_torso(c, dx=0, largo=0):
-    """Tunica marron con cinturon; `largo` alarga el ruedo (abuela)."""
+def dib_torso(c, dx=0, desnudo=True, espalda=False):
+    """Torso del aldeano (desnudo y musculoso) o tunica larga de la abuela."""
+    if desnudo:
+        # hombros anchos y cintura angosta: la V del torso musculoso
+        box(c, 18 + dx, 18, 29 + dx, 19, SKIN)
+        box(c, 19 + dx, 20, 28 + dx, 23, SKIN)
+        box(c, 20 + dx, 24, 27 + dx, 25, SKIN)
+        box(c, 18 + dx, 18, 18 + dx, 19, SKIN_D)
+        box(c, 29 + dx, 18, 29 + dx, 19, SKIN_D)
+        box(c, 20 + dx, 24, 20 + dx, 25, SKIN_D)
+        box(c, 27 + dx, 24, 27 + dx, 25, SKIN_D)
+        if espalda:
+            box(c, 23 + dx, 21, 23 + dx, 24, SKIN_D)    # columna
+            box(c, 21 + dx, 20, 22 + dx, 20, SKIN_L)    # omoplatos
+            box(c, 25 + dx, 20, 26 + dx, 20, SKIN_L)
+        else:
+            # pectorales: luz arriba y linea en sombra abajo
+            box(c, 20 + dx, 20, 22 + dx, 20, SKIN_L)
+            box(c, 25 + dx, 20, 27 + dx, 20, SKIN_L)
+            box(c, 21 + dx, 21, 22 + dx, 21, SKIN_D)
+            box(c, 25 + dx, 21, 26 + dx, 21, SKIN_D)
+            px(c, 23 + dx, 22, SKIN_D)                  # esternon
+            px(c, 24 + dx, 22, SKIN_D)
+            px(c, 22 + dx, 23, SKIN_D)                  # abdomen
+            px(c, 25 + dx, 23, SKIN_D)
+            box(c, 23 + dx, 24, 24 + dx, 24, SKIN_D)
+        # cinturon marron trenzado y grueso, con hebilla plateada
+        box(c, 20 + dx, 26, 27 + dx, 27, BELT)
+        for x in range(21 + dx, 27 + dx, 2):
+            px(c, x, 26, BELT_L)
+        for x in range(20 + dx, 27 + dx, 2):
+            px(c, x, 27, BELT_D)
+        box(c, 23 + dx, 26, 24 + dx, 27, BUCKLE)
+        px(c, 23 + dx, 26, (232, 236, 244))
+        px(c, 24 + dx, 27, BUCKLE_D)
+        return
+    # tunica marron de la abuela
     L, R = 19 + dx, 28 + dx
-    ruedo = 27 + largo
+    ruedo = 27
     box(c, L, 18, R, ruedo, TUNIC)
     # sombra de hombros y luz lateral
     box(c, L, 18, L, 23, TUNIC_D)
@@ -249,32 +340,34 @@ def dib_torso(c, dx=0, largo=0):
     box(c, L, 24, R, 25, BELT)
     box(c, 23 + dx, 24, 24 + dx, 25, BUCKLE)
     px(c, 24 + dx, 24, BELT)
-    px(c, 23 + dx, 25, (176, 144, 66))
+    px(c, 23 + dx, 25, BELT_D)
     # ruedo
     box(c, L, ruedo, R, ruedo, TUNIC_D)
     px(c, 21 + dx, ruedo - 1, TUNIC_D)
     px(c, 26 + dx, ruedo - 1, TUNIC_D)
-    if largo:
-        box(c, L - 1, 28, R + 1, 29, TUNIC)
-        box(c, L - 1, 30, R + 1, 30, TUNIC_D)
-        px(c, 23 + dx, 28, TUNIC_D)
-        px(c, 23 + dx, 29, TUNIC_D)
-        px(c, 26 + dx, 28, TUNIC_D)
-        px(c, 21 + dx, 29, TUNIC_D)
 
 
-def dib_cabeza(c, dx=0, blink=False, mouth=1, cara=True, canas=False):
-    """Cara de frente; con `cara=False` dibuja la nuca (vista de espaldas)."""
+def dib_cabeza(c, dx=0, blink=False, mouth=1, cara=True, canas=False,
+               barba=True):
+    """Cara de frente con pelo corto y barba; `cara=False` dibuja la nuca."""
     pelo = HAIR_G if canas else HAIR
     pelo_l = HAIR_G_D if canas else HAIR_L
+    # pelo: melena corta con volumen arriba (el aldeano ya no usa sombrero)
+    box(c, 22 + dx, 7, 25 + dx, 7, pelo)
+    box(c, 21 + dx, 8, 26 + dx, 8, pelo)
+    box(c, 20 + dx, 9, 27 + dx, 9, pelo)
+    px(c, 23 + dx, 7, pelo_l)
+    px(c, 24 + dx, 7, pelo_l)
+    px(c, 21 + dx, 8, pelo_l)
+    px(c, 26 + dx, 8, pelo_l)
     # cara redondeada (esquinas comidas)
     box(c, 20 + dx, 10, 27 + dx, 16, SKIN)
     borrar(c, 20 + dx, 10)
     borrar(c, 27 + dx, 10)
     borrar(c, 20 + dx, 16)
     borrar(c, 27 + dx, 16)
-    # pelo bajo el ala del sombrero
-    box(c, 21 + dx, 10, 26 + dx, 10, pelo)
+    # pelo sobre la frente y patillas
+    box(c, 20 + dx, 10, 27 + dx, 10, pelo)
     box(c, 20 + dx, 11, 20 + dx, 13, pelo)
     box(c, 27 + dx, 11, 27 + dx, 13, pelo)
     px(c, 22 + dx, 10, pelo_l)
@@ -282,11 +375,11 @@ def dib_cabeza(c, dx=0, blink=False, mouth=1, cara=True, canas=False):
     if not cara:
         # nuca: todo pelo, sin facciones
         box(c, 21 + dx, 11, 26 + dx, 15, pelo)
-        box(c, 22 + dx, 12, 25 + dx, 14, pelo)
-        px(c, 22 + dx, 11, pelo_l)
+        px(c, 21 + dx, 11, pelo_l)
         px(c, 23 + dx, 11, pelo_l)
+        px(c, 24 + dx, 12, pelo_l)
         px(c, 25 + dx, 13, pelo_l)
-        px(c, 21 + dx, 14, pelo_l)
+        px(c, 22 + dx, 14, pelo_l)
         box(c, 22 + dx, 17, 25 + dx, 17, SKIN)
         px(c, 25 + dx, 17, SKIN_D)
         return
@@ -309,6 +402,15 @@ def dib_cabeza(c, dx=0, blink=False, mouth=1, cara=True, canas=False):
     px(c, 23 + dx, 13, SKIN_L)
     px(c, 21 + dx, 14, SKIN_L)
     px(c, 26 + dx, 14, SKIN_L)
+    # barba corta: bigote, patillas y menton
+    if barba:
+        px(c, 22 + dx, 13, BEARD)
+        px(c, 25 + dx, 13, BEARD)
+        box(c, 20 + dx, 14, 21 + dx, 15, BEARD)
+        box(c, 26 + dx, 14, 27 + dx, 15, BEARD)
+        box(c, 22 + dx, 15, 25 + dx, 15, BEARD)
+        box(c, 21 + dx, 16, 26 + dx, 16, BEARD_D)
+        px(c, 23 + dx, 16, BEARD)
     # boca: 0 cerrada, 1 chica, 2 media, 3 ancha (abierta)
     if mouth == 0:
         px(c, 23 + dx, 14, LIP)
@@ -322,31 +424,12 @@ def dib_cabeza(c, dx=0, blink=False, mouth=1, cara=True, canas=False):
         box(c, 21 + dx, 14, 25 + dx, 15, LIP)
         box(c, 22 + dx, 14, 24 + dx, 15, MOUTH)
         box(c, 22 + dx, 14, 24 + dx, 14, TEETH)
-    # menton
-    px(c, 22 + dx, 15, SKIN_D)
-    px(c, 25 + dx, 15, SKIN_D)
-    # cuello
+    # menton (limpio si no hay barba) y cuello
+    if not barba:
+        px(c, 22 + dx, 15, SKIN_D)
+        px(c, 25 + dx, 15, SKIN_D)
     box(c, 22 + dx, 17, 25 + dx, 17, SKIN)
     px(c, 25 + dx, 17, SKIN_D)
-
-
-def dib_sombrero(c, dx=0):
-    """Sombrero de paja: ala ancha + copa con cinta oscura."""
-    # ala
-    box(c, 16 + dx, 7, 30 + dx, 9, HAT)
-    box(c, 16 + dx, 7, 30 + dx, 7, HAT_L)
-    box(c, 16 + dx, 9, 30 + dx, 9, HAT_D)
-    for x in range(17 + dx, 30 + dx, 2):
-        px(c, x, 8, HAT_D)
-    for x, y in ((15, 8), (15, 9), (31, 8), (31, 9)):
-        px(c, x + dx, y, HAT_D)
-    # copa
-    box(c, 20 + dx, 3, 27 + dx, 6, HAT)
-    box(c, 20 + dx, 3, 27 + dx, 3, HAT_L)
-    box(c, 20 + dx, 4, 20 + dx, 6, HAT_L)
-    box(c, 27 + dx, 4, 27 + dx, 5, HAT_D)
-    box(c, 20 + dx, 5, 27 + dx, 6, HAT_BAND)
-    px(c, 21 + dx, 5, (104, 72, 42))
 
 
 def dib_panuelo(c, dx=0):
@@ -376,30 +459,44 @@ def dib_mano(c, x, y, abierta=False):
         px(c, x + 1, y + 1, SKIN_D)
 
 
-def dib_brazo(c, pts, mano_en=None, abierta=False, lado=-1):
+def dib_brazalete(c, codo, muneca):
+    """Brazalete de cuero trenzado: dos vueltas en el antebrazo."""
+    for t, luz, sombra in ((0.35, BRACER_L, BRACER), (0.65, BRACER, BRACER_D)):
+        x = int(round(codo[0] + (muneca[0] - codo[0]) * t))
+        y = int(round(codo[1] + (muneca[1] - codo[1]) * t))
+        box(c, x - 1, y, x + 1, y, sombra)
+        px(c, x, y, luz)
+
+
+def dib_brazo(c, pts, mano_en=None, abierta=False, lado=-1,
+              brazo_desnudo=True, brazaletes=True):
     """Brazo de 3 px sobre la capa del cuerpo.
 
     `lado=-1` para el brazo izquierdo (sombra a la derecha) y `+1` para el
-    derecho (sombra a la izquierda): la sombra marca el pliegue contra la
-    tunica.
+    derecho (sombra a la izquierda): el borde oscuro marca el pliegue del brazo
+    desnudo contra el torso (o contra la tunica de la abuela).
     """
+    color = SKIN if brazo_desnudo else TUNIC
+    borde = OUT if brazo_desnudo else TUNIC_D
     for a, b in zip(pts, pts[1:]):
-        line(c, a[0], a[1], b[0], b[1], TUNIC, 3)
+        line(c, a[0], a[1], b[0], b[1], color, 3)
+    if brazaletes and brazo_desnudo and len(pts) >= 3:
+        dib_brazalete(c, pts[1], pts[2])
     for a, b in zip(pts, pts[1:]):
         if abs(a[1] - b[1]) >= abs(a[0] - b[0]):
-            line(c, a[0] - lado, a[1], b[0] - lado, b[1], TUNIC_D, 1)
+            line(c, a[0] - lado, a[1], b[0] - lado, b[1], borde, 1)
     if mano_en:
         dib_mano(c, mano_en[0], mano_en[1], abierta)
 
 
-def cuerpo(c, dx=0, blink=False, mouth=1, largo=0, cara=True, canas=False,
-           sombrero=True, panuelo=False):
-    """Pega piernas, torso, cabeza y sombrero/panuelo en la capa `c`."""
-    dib_piernas(c, dx)
-    dib_torso(c, dx, largo)
-    dib_cabeza(c, dx, blink=blink, mouth=mouth, cara=cara, canas=canas)
-    if sombrero:
-        dib_sombrero(c, dx)
+def cuerpo(c, dx=0, blink=False, mouth=1, cara=True, canas=False,
+           panuelo=False, desnudo=True, barba=True, espalda=False,
+           falda=False):
+    """Pega piernas, torso, cabeza y panuelo en la capa `c`."""
+    dib_piernas(c, dx, falda=falda)
+    dib_torso(c, dx, desnudo=desnudo, espalda=espalda)
+    dib_cabeza(c, dx, blink=blink, mouth=mouth, cara=cara, canas=canas,
+               barba=barba)
     if panuelo:
         dib_panuelo(c, dx)
 
@@ -467,46 +564,6 @@ def dib_martillo(c, x, y, arriba=True):
         box(c, x + 2, y + 3, x + 6, y + 5, STEEL)
         box(c, x + 2, y + 3, x + 6, y + 3, STEEL_L)
         box(c, x + 4, y + 4, x + 4, y + 5, STEEL_D)
-
-
-def dib_cohete(c, x, y):
-    """Cohete de madera atado a la espalda (yolo/super-yolo)."""
-    box(c, x, y, x + 3, y + 8, WOOD)
-    box(c, x, y, x, y + 8, WOOD_D)
-    px(c, x + 1, y + 2, WOOD_D)
-    px(c, x + 3, y + 5, WOOD_D)
-    # punta
-    box(c, x + 1, y - 1, x + 2, y - 1, STEEL)
-    # aletas
-    for yy in (y + 6, y + 7):
-        px(c, x - 1, yy, GREY_D)
-        px(c, x + 4, yy, GREY_D)
-
-
-def dib_llama(c, x, y):
-    """Llama del cohete (fuera del contorno del cuerpo)."""
-    box(c, x + 1, y + 9, x + 2, y + 9, FLAME)
-    box(c, x + 1, y + 10, x + 2, y + 10, FLAME_L)
-    px(c, x + 1, y + 11, FLAME)
-    px(c, x + 2, y + 11, FLAME)
-
-
-def vincha(dst, dx=0):
-    """Vincha magenta YOLO sobre la frente."""
-    box(dst, 20 + dx, 11, 26 + dx, 11, MAGENTA)
-    px(dst, 20 + dx, 11, MAGENTA_D)
-    px(dst, 26 + dx, 11, MAGENTA_D)
-    px(dst, 19 + dx, 12, MAGENTA)
-    px(dst, 18 + dx, 13, MAGENTA)
-    px(dst, 17 + dx, 14, MAGENTA_D)
-
-
-def sol(dst, cx, cy):
-    ell(dst, cx, cy, 2, 2, YELLOW)
-    px(dst, cx - 1, cy - 1, FLAME_L)
-    for dx, dy in ((0, -3), (0, 3), (-3, 0), (3, 0),
-                   (-2, -2), (2, -2), (-2, 2), (2, 2)):
-        px(dst, cx + dx, cy + dy, YELLOW_D)
 
 
 def polvo(dst, cx, cy, r=2):
@@ -607,25 +664,32 @@ def frame_success(n):
 def frame_failure_front():
     b = canvas()
     c = canvas()
-    # piernas hacia la derecha
+    # piernas hacia la derecha (pantalon azul y pies descalzos)
     box(c, 29, 28, 37, 30, PANTS)
     box(c, 29, 30, 37, 30, PANTS_D)
     box(c, 30, 31, 37, 33, PANTS)
     box(c, 30, 33, 37, 33, PANTS_D)
-    box(c, 37, 27, 40, 30, BOOT)
-    box(c, 37, 27, 40, 27, BOOT_L)
-    box(c, 37, 31, 40, 34, BOOT)
-    box(c, 37, 31, 40, 31, BOOT_L)
-    # torso tirado de frente
-    box(c, 17, 26, 30, 32, TUNIC)
-    box(c, 17, 32, 30, 32, TUNIC_D)
-    box(c, 17, 26, 30, 26, TUNIC_L)
+    box(c, 37, 27, 40, 30, SKIN)
+    box(c, 37, 27, 40, 27, SKIN_L)
+    box(c, 37, 30, 40, 30, SKIN_D)
+    box(c, 37, 31, 40, 34, SKIN)
+    box(c, 37, 31, 40, 31, SKIN_L)
+    box(c, 37, 34, 40, 34, SKIN_D)
+    # torso desnudo tirado de frente
+    box(c, 17, 26, 30, 32, SKIN)
+    box(c, 17, 32, 30, 32, SKIN_D)
+    box(c, 17, 26, 30, 26, SKIN_L)
+    box(c, 17, 26, 17, 32, SKIN_D)
+    px(c, 20, 29, SKIN_D)       # pectoral
+    px(c, 22, 30, SKIN_D)       # abdomen
+    px(c, 24, 28, SKIN_D)
+    # cinturon trenzado y hebilla, vistos de costado
     box(c, 25, 26, 26, 32, BELT)
     px(c, 25, 29, BUCKLE)
     px(c, 25, 30, BUCKLE)
-    px(c, 20, 29, TUNIC_D)
-    px(c, 22, 30, TUNIC_D)
-    # brazos abiertos
+    px(c, 26, 28, BELT_L)
+    px(c, 26, 31, BELT_D)
+    # brazos abiertos, con brazalete
     dib_brazo(c, [(30, 29), (34, 33), (36, 34)], (37, 35), abierta=True, lado=+1)
     dib_brazo(c, [(18, 28), (16, 24), (17, 22)], (18, 21), abierta=True, lado=-1)
     # cabeza de frente, apoyada
@@ -634,8 +698,13 @@ def frame_failure_front():
     borrar(c, 18, 25)
     borrar(c, 9, 34)
     borrar(c, 18, 34)
+    # pelo y barba corta
     box(c, 10, 25, 17, 26, HAIR)
     box(c, 9, 27, 9, 30, HAIR)
+    px(c, 12, 25, HAIR_L)
+    px(c, 15, 26, HAIR_L)
+    box(c, 10, 33, 17, 34, BEARD)
+    box(c, 11, 34, 16, 34, BEARD_D)
     for x in (12, 16):
         px(c, x - 1, 28, OUT)
         px(c, x + 1, 28, OUT)
@@ -645,15 +714,6 @@ def frame_failure_front():
     px(c, 14, 31, SKIN_D)
     box(c, 12, 32, 15, 32, MOUTH)
     px(c, 13, 32, TEETH)
-    px(c, 11, 33, SKIN_D)
-    px(c, 16, 33, SKIN_D)
-    # sombrero caido de costado, sobre la cabeza
-    box(c, 6, 20, 17, 23, HAT)
-    box(c, 6, 23, 17, 23, HAT_D)
-    box(c, 7, 20, 16, 20, HAT_L)
-    box(c, 12, 16, 15, 22, HAT)
-    box(c, 12, 16, 15, 17, HAT_BAND)
-    box(c, 12, 18, 15, 19, HAT)
     pegar(b, c)
     # polvo y espada clavada
     polvo(b, 18, 19, 2)
@@ -666,23 +726,27 @@ def frame_failure_front():
 def frame_failure_back():
     b = canvas()
     c = canvas()
-    # piernas hacia la izquierda
+    # piernas hacia la izquierda (pantalon azul y pies descalzos)
     box(c, 10, 28, 18, 30, PANTS)
     box(c, 10, 30, 18, 30, PANTS_D)
     box(c, 10, 31, 17, 33, PANTS)
     box(c, 10, 33, 17, 33, PANTS_D)
-    box(c, 7, 27, 10, 30, BOOT)
-    box(c, 7, 27, 10, 27, BOOT_L)
-    box(c, 7, 31, 10, 34, BOOT)
-    box(c, 7, 31, 10, 31, BOOT_L)
+    box(c, 7, 27, 10, 30, SKIN)
+    box(c, 7, 27, 10, 27, SKIN_L)
+    box(c, 7, 30, 10, 30, SKIN_D)
+    box(c, 7, 31, 10, 34, SKIN)
+    box(c, 7, 31, 10, 31, SKIN_L)
+    box(c, 7, 34, 10, 34, SKIN_D)
     # torso de espaldas (sin hebilla)
-    box(c, 17, 26, 30, 32, TUNIC)
-    box(c, 17, 26, 30, 26, TUNIC_D)
-    box(c, 17, 32, 30, 32, TUNIC_D)
-    box(c, 23, 26, 24, 32, TUNIC_D)
-    box(c, 24, 26, 25, 32, BELT)
-    px(c, 20, 29, TUNIC_D)
-    px(c, 27, 30, TUNIC_D)
+    box(c, 17, 26, 30, 32, SKIN)
+    box(c, 17, 26, 30, 26, SKIN_D)
+    box(c, 17, 32, 30, 32, SKIN_D)
+    box(c, 23, 26, 24, 32, SKIN_D)   # columna
+    box(c, 25, 26, 26, 32, BELT)     # cinturon trenzado, de espaldas
+    px(c, 25, 29, BELT_L)
+    px(c, 25, 31, BELT_D)
+    px(c, 20, 29, SKIN_L)            # omoplato
+    px(c, 27, 30, SKIN_L)
     # brazos
     dib_brazo(c, [(18, 28), (14, 32), (12, 33)], (11, 34), abierta=True, lado=-1)
     dib_brazo(c, [(29, 29), (31, 24), (31, 22)], (31, 21), abierta=True, lado=+1)
@@ -700,13 +764,6 @@ def frame_failure_back():
     px(c, 35, 29, HAIR_L)
     px(c, 36, 32, HAIR_L)
     box(c, 33, 34, 36, 34, SKIN)
-    # sombrero caido al otro lado
-    box(c, 20, 21, 31, 24, HAT)
-    box(c, 20, 24, 31, 24, HAT_D)
-    box(c, 21, 21, 30, 21, HAT_L)
-    box(c, 24, 17, 27, 23, HAT)
-    box(c, 24, 17, 27, 18, HAT_BAND)
-    box(c, 24, 19, 27, 20, HAT)
     pegar(b, c)
     # polvo y espada clavada
     polvo(b, 19, 18, 2)
@@ -719,33 +776,20 @@ def frame_failure_back():
 def frame_bye(n):
     b = canvas()
     c = canvas()
-    if n == 1:  # sombrero puesto + mano que se despide
+    if n == 1:  # saludo de despedida, mano arriba
         cuerpo(c, mouth=2)
         dib_brazo(c, [(28, 19), (29, 23), (29, 26)], (29, 27), lado=+1)
         dib_brazo(c, [(19, 19), (15, 16), (13, 13)], (12, 12), abierta=True, lado=-1)
         pegar(b, c)
         px(b, 8, 7, YELLOW)
         px(b, 9, 11, YELLOW_D)
-    else:  # sombrero en la mano, cabeza descubierta
-        cuerpo(c, mouth=1, sombrero=False)
-        # pelo al descubierto
-        box(c, 20, 9, 27, 10, HAIR)
-        box(c, 19, 9, 19, 11, HAIR)
-        box(c, 28, 9, 28, 11, HAIR)
-        px(c, 21, 9, HAIR_L)
-        px(c, 23, 9, HAIR_L)
-        px(c, 25, 10, HAIR_L)
-        px(c, 20, 9, HAIR_L)
-        # sombrero en la mano, al costado
-        box(c, 37, 18, 40, 21, HAT)
-        box(c, 37, 18, 40, 18, HAT_L)
-        box(c, 37, 20, 40, 20, HAT_BAND)
-        box(c, 34, 22, 43, 23, HAT)
-        box(c, 34, 23, 43, 23, HAT_D)
-        box(c, 35, 22, 42, 22, HAT_L)
+    else:  # de espaldas, alejandose (ya no hay sombrero que llevarse)
+        cuerpo(c, mouth=1, cara=False, espalda=True)
         dib_brazo(c, [(19, 19), (18, 23), (18, 26)], (18, 27), lado=-1)
-        dib_brazo(c, [(28, 19), (31, 21), (33, 22)], (34, 22), lado=+1)
+        dib_brazo(c, [(28, 19), (29, 23), (29, 26)], (29, 27), lado=+1)
         pegar(b, c)
+        polvo(b, 20, 37, 1)
+        polvo(b, 28, 37, 1)
     return b
 
 
@@ -773,39 +817,12 @@ def frame_jobs(n):
     return b
 
 
-def frame_yolo(n, superyolo=False):
-    b = canvas()
-    c = canvas()
-    dx = -1 if n == 1 else 1
-    dib_cohete(c, 11 + dx, 9)
-    cuerpo(c, dx=dx, mouth=2)
-    # correas del cohete al hombro
-    px(c, 15 + dx, 13, BELT)
-    px(c, 16 + dx, 14, BELT)
-    px(c, 17 + dx, 15, BELT)
-    if n == 1:
-        dib_brazo(c, [(20 + dx, 19), (16 + dx, 21), (14 + dx, 24)],
-                  (13 + dx, 25), abierta=True, lado=-1)
-        dib_brazo(c, [(28 + dx, 19), (29 + dx, 23), (29 + dx, 26)],
-                  (29 + dx, 27), lado=+1)
-    else:
-        dib_brazo(c, [(20 + dx, 19), (19 + dx, 23), (19 + dx, 26)],
-                  (19 + dx, 27), lado=-1)
-        dib_brazo(c, [(28 + dx, 19), (32 + dx, 21), (34 + dx, 24)],
-                  (35 + dx, 25), abierta=True, lado=+1)
-    pegar(b, c)
-    dib_llama(b, 11 + dx, 9)
-    vincha(b, dx)
-    if superyolo:
-        sol(b, 40, 6)
-    return b
-
-
 def frame_grandma(n):
     b = canvas()
     c = canvas()
-    # aldeana: pollera larga y panuelo en vez de sombrero de paja
-    cuerpo(c, largo=3, mouth=1, canas=True, sombrero=False, panuelo=True)
+    # abuela: pollera larga y panuelo; el aldeano nuevo no tiene sombrero
+    cuerpo(c, mouth=1, canas=True, panuelo=True, desnudo=False, barba=False,
+           falda=True)
     # canas a los costados
     px(c, 19, 12, HAIR_G)
     px(c, 28, 12, HAIR_G)
@@ -823,8 +840,10 @@ def frame_grandma(n):
         box(c, 22, 19, 25, 20, YARN)
         line(c, 32, 33, 29, 22, YARN, 1)
         line(c, 29, 22, 25, 20, YARN_D, 1)
-        dib_brazo(c, [(19, 19), (17, 23), (18, 22)], (18, 21), abierta=True, lado=-1)
-        dib_brazo(c, [(28, 19), (30, 23), (29, 22)], (29, 21), abierta=True, lado=+1)
+        dib_brazo(c, [(19, 19), (17, 23), (18, 22)], (18, 21), abierta=True,
+                  lado=-1, brazaletes=False)
+        dib_brazo(c, [(28, 19), (30, 23), (29, 22)], (29, 21), abierta=True,
+                  lado=+1, brazaletes=False)
     else:  # manos abajo: la prenda en la falda
         line(c, 17, 22, 30, 22, NEEDLE, 1)
         line(c, 17, 26, 30, 22, NEEDLE, 1)
@@ -832,8 +851,10 @@ def frame_grandma(n):
         box(c, 21, 26, 26, 26, YARN_D)
         px(c, 22, 24, YARN_L)
         line(c, 32, 33, 29, 27, YARN, 1)
-        dib_brazo(c, [(19, 19), (17, 23), (18, 24)], (18, 25), abierta=True, lado=-1)
-        dib_brazo(c, [(28, 19), (30, 23), (29, 24)], (29, 25), abierta=True, lado=+1)
+        dib_brazo(c, [(19, 19), (17, 23), (18, 24)], (18, 25), abierta=True,
+                  lado=-1, brazaletes=False)
+        dib_brazo(c, [(28, 19), (30, 23), (29, 24)], (29, 25), abierta=True,
+                  lado=+1, brazaletes=False)
     pegar(b, c)
     return b
 
@@ -863,9 +884,19 @@ def frame_write(n):
 
 # ── Entrega ────────────────────────────────────────────────────────────────
 # estado: [(nombre de archivo, constructor)]
+# Los nombres son exactamente los PNG que hay en `emotes/aoe/` (y en su gemelo
+# `emotes/aoe-yolo/`): sin alias nuevos, para que correr el script no agregue ni
+# borre archivos. Las poses que el ciclo pide de mas repiten la pose 1; las que
+# vienen de tandas viejas (`_03`) usan la misma pose, asi no queda arte anterior.
+#
+# `explore`, `build`, `jira`, `review`, `yolo` y `super-yolo` no estan en esta
+# tabla a proposito: los dibujan `gen_explore_aoe.py`, `gen_build_aoe.py` y
+# `gen_yolo_aoe.py`, que comparten estas primitivas. Correr este script no los
+# pisa.
 FRAMES = [
     ("hi", [("hi_01.png", lambda: frame_hi(1)),
-            ("hi_02.png", lambda: frame_hi(2))]),
+            ("hi_02.png", lambda: frame_hi(2)),
+            ("hi_03.png", lambda: frame_hi(1))]),
     ("idle", [("idle.png", lambda: frame_idle(1)),
               ("idle_blink.png", lambda: frame_idle(2))]),
     ("talk", [("talk_close.png", lambda: frame_talk(0)),
@@ -873,37 +904,27 @@ FRAMES = [
               ("talk_mid.png", lambda: frame_talk(2)),
               ("talk_wide.png", lambda: frame_talk(3)),
               ("talk.png", lambda: frame_talk(2))]),
-    # los placeholders viejos de una pose se reescriben con la pose 1 para que
-    # el ciclo no muestre al personaje anterior; quedan como duplicados
     ("ask", [("ask_01.png", lambda: frame_ask(1)),
              ("ask_02.png", lambda: frame_ask(2)),
-             ("ask.png", lambda: frame_ask(1))]),
+             ("ask_03.png", lambda: frame_ask(1))]),
     ("success", [("success_01.png", lambda: frame_success(1)),
                  ("success_02.png", lambda: frame_success(2)),
-                 ("success.png", lambda: frame_success(1))]),
-    ("failure", [("failure_01.png", frame_failure_front),
-                 ("failure_02.png", frame_failure_back),
-                 ("failure.png", frame_failure_front)]),
+                 ("success_03.png", lambda: frame_success(1))]),
+    ("failure", [("down_01.png", frame_failure_front),
+                 ("down_02.png", frame_failure_back),
+                 ("down_03.png", frame_failure_front)]),
     ("bye", [("bye_01.png", lambda: frame_bye(1)),
              ("bye_02.png", lambda: frame_bye(2)),
-             ("bye.png", lambda: frame_bye(1))]),
+             ("bye_03.png", lambda: frame_bye(1))]),
     ("jobs", [("jobs_01.png", lambda: frame_jobs(1)),
               ("jobs_02.png", lambda: frame_jobs(2)),
-              ("jobs.png", lambda: frame_jobs(1))]),
-    ("yolo", [("yolo_01.png", lambda: frame_yolo(1)),
-              ("yolo_02.png", lambda: frame_yolo(2)),
-              ("yolo.png", lambda: frame_yolo(1)),
-              ("yolo_blink.png", lambda: frame_yolo(1))]),
-    ("super-yolo", [("super-yolo_01.png", lambda: frame_yolo(1, True)),
-                    ("super-yolo_02.png", lambda: frame_yolo(2, True)),
-                    ("super-yolo.png", lambda: frame_yolo(1, True)),
-                    ("super-yolo_blink.png", lambda: frame_yolo(1, True))]),
+              ("jobs_03.png", lambda: frame_jobs(1))]),
     ("grandma", [("grandma_01.png", lambda: frame_grandma(1)),
                  ("grandma_02.png", lambda: frame_grandma(2)),
-                 ("grandma.png", lambda: frame_grandma(1))]),
+                 ("grandma_03.png", lambda: frame_grandma(1))]),
     ("write", [("write_01.png", lambda: frame_write(1)),
                ("write_02.png", lambda: frame_write(2)),
-               ("write.png", lambda: frame_write(1))]),
+               ("write_03.png", lambda: frame_write(1))]),
 ]
 
 
@@ -955,8 +976,8 @@ def main():
             total += tam
             linea.append("%s=%dB" % (nombre, tam))
         print("  %-11s %s" % (estado, ", ".join(linea)))
-    print("  total       %d PNG, %d bytes"
-          % (sum(len(f) for f in escritos.values()), total))
+    print("  total       %d PNG, %d bytes en emotes/%s/"
+          % (sum(len(f) for f in escritos.values()), total, SET_NAME))
 
 
 if __name__ == "__main__":
