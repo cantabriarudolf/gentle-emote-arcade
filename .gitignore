@@ -53,3 +53,9 @@ desktop.ini
 
 __pycache__/
 *.pyc
+
+# ── Originales MP3 de los packs convertidos a WAV (2026-11-08) ───────────────
+# La suite de notificaciones de Gentle Shell solo reproduce WAV PCM entero
+# (format 1, ≤2 MiB, ≤10 s). Los MP3 originales siguen en el historial de este
+# repo; en disco quedan acá como copia de trabajo, no como entrega.
+sounds/*/mp3/
