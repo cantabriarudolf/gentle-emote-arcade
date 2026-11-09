@@ -1,0 +1,473 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>gentle-emote · demo por juego</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --fondo: #14110d;
+    --panel: #1f1a13;
+    --panel-alto: #262016;
+    --borde: #4b3a23;
+    --borde-suave: #332a1c;
+    --oro: #e6c27a;
+    --texto: #efe6d6;
+    --tenue: #a8987f;
+    --rojo: #e07a5f;
+    --radio: 10px;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background:
+      radial-gradient(1200px 500px at 20% -10%, #2a2114 0%, transparent 60%),
+      var(--fondo);
+    color: var(--texto);
+    font: 15px/1.55 ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    min-height: 100vh;
+  }
+
+  h1, h2, p { margin: 0; }
+
+  code { font: inherit; }
+
+  .barra {
+    border-bottom: 1px solid var(--borde);
+    background: linear-gradient(180deg, rgba(38, 32, 22, .92), rgba(31, 26, 19, .88));
+    padding: 18px clamp(14px, 4vw, 40px) 16px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 14px 28px;
+  }
+
+  .titulo { flex: 1 1 380px; }
+
+  .titulo h1 {
+    font-size: clamp(18px, 2.4vw, 24px);
+    color: var(--oro);
+    letter-spacing: .02em;
+  }
+
+  .titulo h1 span { color: var(--texto); font-weight: 400; }
+
+  .titulo p {
+    margin-top: 4px;
+    color: var(--tenue);
+    font-size: 13px;
+    max-width: 70ch;
+  }
+
+  .controles {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 16px;
+  }
+
+  .campo {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--tenue);
+    font-size: 13px;
+  }
+
+  select, button {
+    font: inherit;
+    color: var(--texto);
+    background: var(--panel-alto);
+    border: 1px solid var(--borde);
+    border-radius: 8px;
+    padding: 6px 10px;
+  }
+
+  select:focus-visible, button:focus-visible, input:focus-visible {
+    outline: 2px solid var(--oro);
+    outline-offset: 2px;
+  }
+
+  button { cursor: pointer; }
+  button:hover { border-color: var(--oro); }
+  button:disabled { opacity: .5; cursor: default; }
+
+  .campo input[type="checkbox"] { accent-color: var(--oro); width: 16px; height: 16px; }
+
+  .resumen {
+    flex-basis: 100%;
+    color: var(--tenue);
+    font-size: 12.5px;
+  }
+
+  .resumen b { color: var(--texto); font-weight: 600; }
+
+  main {
+    padding: 20px clamp(14px, 4vw, 40px) 56px;
+  }
+
+  #grilla {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(212px, 1fr));
+    gap: 14px;
+  }
+
+  #grilla.serie { display: block; }
+
+  figure { margin: 0; }
+
+  .clip, .marco {
+    background: var(--panel);
+    border: 1px solid var(--borde-suave);
+    border-radius: var(--radio);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .lienzo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    min-height: 168px;
+    background-color: #191510;
+    background-image:
+      linear-gradient(45deg, #221c14 25%, transparent 25%, transparent 75%, #221c14 75%),
+      linear-gradient(45deg, #221c14 25%, transparent 25%, transparent 75%, #221c14 75%);
+    background-size: 16px 16px;
+    background-position: 0 0, 8px 8px;
+  }
+
+  .clip .lienzo { min-height: 196px; }
+
+  .marco .lienzo { min-height: 150px; padding: 10px; }
+
+  .pixel {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, .45));
+  }
+
+  figcaption {
+    border-top: 1px solid var(--borde-suave);
+    padding: 9px 11px 10px;
+    display: grid;
+    gap: 3px;
+  }
+
+  .vineta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0 6px;
+  }
+
+  .estado {
+    color: var(--oro);
+    font-weight: 700;
+  }
+
+  .sep { color: var(--borde); }
+
+  .accion { color: var(--texto); }
+
+  .meta, .archivo {
+    color: var(--tenue);
+    font-size: 11.5px;
+    line-height: 1.4;
+  }
+
+  .archivo { word-break: break-all; }
+
+  .estado-serie + .estado-serie { margin-top: 30px; }
+
+  .serie-cabecera {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 14px;
+    padding-bottom: 9px;
+    margin-bottom: 12px;
+    border-bottom: 1px dashed var(--borde-suave);
+  }
+
+  .serie-cabecera h2 { font-size: 15px; font-weight: 600; }
+  .serie-cabecera h2 .estado { font-size: 16px; }
+  .serie-cabecera .meta { font-size: 12px; }
+
+  .marcos {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(184px, 1fr));
+    gap: 12px;
+  }
+
+  .error {
+    margin: 20px clamp(14px, 4vw, 40px);
+    padding: 12px 14px;
+    border: 1px solid var(--rojo);
+    border-radius: var(--radio);
+    color: #ffd9cf;
+    background: #2a1712;
+  }
+
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+  <header class="barra">
+    <div class="titulo">
+      <h1>gentle-emote <span>· demo por juego</span></h1>
+      <p>Serie completa de las 24 escenas en PNG crudos 48×40, escalados ×4 por CSS.
+         Cada viñeta indica la acción que hace el agente en ese estado.</p>
+    </div>
+    <div class="controles">
+      <label class="campo" for="juego">Juego
+        <select id="juego" disabled>
+          <option>cargando…</option>
+        </select>
+      </label>
+      <label class="campo" for="serie">
+        <input type="checkbox" id="serie">
+        Serie completa
+      </label>
+      <button type="button" id="pausa" disabled>Pausar</button>
+    </div>
+    <p class="resumen" id="resumen" role="status">Cargando catálogo…</p>
+  </header>
+
+  <main id="grilla"></main>
+  <p class="error" id="error" hidden></p>
+
+<script>
+(() => {
+  "use strict";
+
+  const grilla = document.getElementById("grilla");
+  const selJuego = document.getElementById("juego");
+  const serieChk = document.getElementById("serie");
+  const pausaBtn = document.getElementById("pausa");
+  const resumen = document.getElementById("resumen");
+  const cajaError = document.getElementById("error");
+
+  let catalogo = null;
+  let pausado = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let cancelaciones = [];
+  const precargados = new Set();
+
+  function crear(tag, clase, texto) {
+    const el = document.createElement(tag);
+    if (clase) el.className = clase;
+    if (texto !== undefined) el.textContent = texto;
+    return el;
+  }
+
+  function juegoActual() {
+    if (!catalogo) return null;
+    return catalogo.games.find((g) => g.game === selJuego.value) || catalogo.games[0];
+  }
+
+  function detener() {
+    for (const cancelar of cancelaciones) cancelar();
+    cancelaciones = [];
+  }
+
+  function mostrarError(mensaje) {
+    detener();
+    cajaError.hidden = false;
+    cajaError.textContent = mensaje;
+    resumen.textContent = "Sin catálogo.";
+    grilla.replaceChildren();
+  }
+
+  function actualizarBoton() {
+    pausaBtn.textContent = pausado ? "Reanudar" : "Pausar";
+    pausaBtn.setAttribute("aria-pressed", pausado ? "true" : "false");
+  }
+
+  function precargar(juego) {
+    for (const clip of juego.clips) {
+      for (const frame of clip.frames) {
+        if (precargados.has(frame.url)) continue;
+        const img = new Image();
+        img.src = frame.url;
+        precargados.add(frame.url);
+      }
+    }
+  }
+
+  function crearImagen(frame, clip, modoCarga) {
+    const img = document.createElement("img");
+    img.className = "pixel";
+    img.src = frame.url;
+    img.alt = clip.state + " — " + clip.label + " — " + frame.file;
+    img.width = frame.w * catalogo.scale;
+    img.height = frame.h * catalogo.scale;
+    img.loading = modoCarga;
+    img.decoding = "async";
+    img.draggable = false;
+    return img;
+  }
+
+  function crearVineta(clip, archivo) {
+    const cap = document.createElement("figcaption");
+    const vineta = crear("p", "vineta");
+    vineta.append(crear("span", "estado", clip.state));
+    vineta.append(crear("span", "sep", "·"));
+    vineta.append(crear("span", "accion", clip.label));
+    cap.append(vineta);
+    if (archivo) {
+      cap.append(crear("code", "archivo", archivo));
+    } else {
+      cap.append(crear("span", "meta",
+        clip.frames.length + " frames · " + clip.frameMs + " ms · " + clip.cycle));
+    }
+    return cap;
+  }
+
+  function animar(img, clip) {
+    if (clip.frames.length < 2) return;
+    let i = 0;
+    let dir = 1;
+    let timer = null;
+    const pintar = () => {
+      const frame = clip.frames[i];
+      img.src = frame.url;
+      img.alt = clip.state + " — " + clip.label + " — " + frame.file;
+    };
+    const paso = () => {
+      pintar();
+      if (clip.cycle === "pingpong") {
+        if (i + dir < 0 || i + dir >= clip.frames.length) dir = -dir;
+        i += dir;
+      } else {
+        i = (i + 1) % clip.frames.length;
+      }
+      timer = window.setTimeout(paso, clip.frameMs);
+    };
+    paso();
+    cancelaciones.push(() => window.clearTimeout(timer));
+  }
+
+  function renderClips(juego) {
+    const frag = document.createDocumentFragment();
+    for (const clip of juego.clips) {
+      const fig = crear("figure", "clip");
+      const lienzo = crear("div", "lienzo");
+      const img = crearImagen(clip.frames[0], clip, "eager");
+      lienzo.append(img);
+      fig.append(lienzo, crearVineta(clip));
+      frag.append(fig);
+      if (!pausado) animar(img, clip);
+    }
+    return frag;
+  }
+
+  function renderSerie(juego) {
+    const frag = document.createDocumentFragment();
+    for (const clip of juego.clips) {
+      const seccion = crear("section", "estado-serie");
+      const cabecera = crear("header", "serie-cabecera");
+      const titulo = crear("h2");
+      titulo.append(crear("code", "estado", clip.state));
+      titulo.append(document.createTextNode(" — "));
+      titulo.append(crear("span", "accion", clip.label));
+      cabecera.append(titulo);
+      cabecera.append(crear("p", "meta",
+        clip.frames.length + " frames · " + clip.frameMs + " ms · " + clip.cycle +
+        " · " + clip.sprite));
+      seccion.append(cabecera);
+
+      const marcos = crear("div", "marcos");
+      for (const frame of clip.frames) {
+        const fig = crear("figure", "marco");
+        const lienzo = crear("div", "lienzo");
+        lienzo.append(crearImagen(frame, clip, "lazy"));
+        fig.append(lienzo, crearVineta(clip, frame.file));
+        marcos.append(fig);
+      }
+      seccion.append(marcos);
+      frag.append(seccion);
+    }
+    return frag;
+  }
+
+  function actualizarResumen(juego) {
+    const detalle = juego.clips.length + " estados · " + juego.totalFrames +
+      " frames · ×" + catalogo.scale + " por CSS";
+    let texto = serieChk.checked
+      ? juego.game + " · serie completa: una viñeta por imagen. " + detalle + "."
+      : juego.game + " · " + detalle +
+        ". Activá «Serie completa» para ver todos los frames.";
+    if (catalogo.mapa) texto += " Viñetas: " + catalogo.mapa + ".";
+    if (catalogo.skipped && catalogo.skipped.length) {
+      texto += " Omitidos: " +
+        catalogo.skipped.map((item) => item.game).join(", ") + ".";
+    }
+    resumen.textContent = texto;
+  }
+
+  function render() {
+    detener();
+    const juego = juegoActual();
+    if (!juego) return;
+    precargar(juego);
+    grilla.classList.toggle("serie", serieChk.checked);
+    grilla.replaceChildren(
+      serieChk.checked ? renderSerie(juego) : renderClips(juego)
+    );
+    actualizarResumen(juego);
+    actualizarBoton();
+  }
+
+  async function cargar() {
+    try {
+      const respuesta = await fetch("/api/juegos", { cache: "no-store" });
+      if (!respuesta.ok) throw new Error("HTTP " + respuesta.status);
+      catalogo = await respuesta.json();
+    } catch (err) {
+      mostrarError(
+        "No se pudo leer /api/juegos (" + err.message + "). " +
+        "Abrí esta página con python3 scripts/scenes_demo.py, no con file://."
+      );
+      return;
+    }
+
+    if (!catalogo || !Array.isArray(catalogo.games) || !catalogo.games.length) {
+      mostrarError("El catálogo no tiene juegos completos.");
+      return;
+    }
+
+    selJuego.replaceChildren();
+    for (const juego of catalogo.games) {
+      const opt = document.createElement("option");
+      opt.value = juego.game;
+      opt.textContent = juego.game;
+      selJuego.append(opt);
+    }
+    selJuego.value = (catalogo.games.find((g) => g.game === "aoe") ||
+                      catalogo.games[0]).game;
+    selJuego.disabled = false;
+    pausaBtn.disabled = false;
+
+    selJuego.addEventListener("change", render);
+    serieChk.addEventListener("change", render);
+    pausaBtn.addEventListener("click", () => {
+      pausado = !pausado;
+      render();
+    });
+
+    render();
+  }
+
+  cargar();
+})();
+</script>
+</body>
+</html>
