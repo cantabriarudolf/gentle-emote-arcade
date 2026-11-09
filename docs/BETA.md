@@ -1,24 +1,26 @@
 # BETA — estado y checklist de publicación
 
 Última verificación: 2026-11-08, sobre el árbol de trabajo (repo local `main`,
-sin remoto). Corte de esta versión: **beta AoE publicable** — entran los dibujos
-del set `aoe`/`aoe-yolo` y los 13 wav configurados de `sounds/aoe/`. Los packs
-`minecraft`, `cs16`, `starcraft` y `lol` también están en `sounds/`, pero fuera
-de beta: los dos últimos son mp3 sin licencia verificada. El resto del material
-de trabajo (60 mp3 de `datas/`, previews, lab) queda afuera por `.gitignore`
-(sigue en disco).
+con remoto en `github.com/cantabriarudolf/gentle-emote-arcade`). Corte de esta
+versión: los cinco sets tienen las 24 escenas y los cinco packs de sonido se
+pueden sonar en la suite. Los audios son **WAV PCM**: la suite de
+notificaciones de Gentle Shell solo reproduce RIFF/WAVE entero (format 1,
+mono o estéreo, 8/16/24/32 bits, 8000-192000 Hz, ≤2 MiB y ≤10 s) y rechaza
+MP3/OGG/FLAC antes de spawnear el backend. Los MP3 originales de los packs
+convertidos quedan en `sounds/<juego>/mp3/`, ignorados por git: siguen en el
+historial y en disco como copia de trabajo. El resto del material de trabajo
+(60 mp3 de `datas/`, previews, lab) queda afuera por `.gitignore` (sigue en
+disco).
 
 ## Resumen
 
-- **`aoe` está en beta**: los 24 estados ya son arte propio 48×40 con movimiento (2-4 poses en loop, frames con texto extra en `think`, `failure`, `hi`, `yolo`, `super-yolo`).
-- **`aoe-yolo` está generado** desde `aoe` (gemelo YOLO / Super-YOLO).
-- **`starcraft`, `lol`, `cs16` (+ sus `-yolo`) están en desarrollo**: solo
-  `emotes.json`, cero frames. **`minecraft` es el próximo set a sumar**: no
-  tiene nada todavía.
-- **Audio**: `aoe` completo (13 wav + `seleccion.json`, 14 eventos);
-  `minecraft` (13 mp3) y `cs16` (12 wav) descargados con `seleccion.json`;
-  `starcraft` y `lol` curados de `datas/` (14 mp3 cada uno + `seleccion.json`),
-  **sin licencia verificada**.
+- **Los cinco sets están completos**: 24 estados con arte propio 48×40 y
+  movimiento (2-4 poses en loop, frames con texto extra en `think`, `failure`,
+  `hi`, `yolo`, `super-yolo`). `aoe` y `aoe-yolo` a mano; `cs16`, `minecraft`,
+  `starcraft` y `lol` generados por código en `scripts/sprites/`.
+- **Audio**: los cinco packs son WAV PCM decidible por la suite, 14 eventos
+  cada uno (13 en `aoe`, 12 en `cs16`, por tallos repetidos).
+  `starcraft` y `lol` siguen **sin licencia verificada**.
 - **Fuera del repo**: 60 mp3 crudos (`datas/`), 60 previews y recortes
   (`previews/`), 1 JPG crudo de referencia, y `lab/` + `test/` del workspace.
   Las copias curadas de `sounds/starcraft/` y `sounds/lol/` sí están en el
@@ -37,12 +39,13 @@ detalle del porqué, evento por evento, está en
 
 | Set | Frames | `emotes.json` | Estado |
 |---|---|---|---|
-| `aoe` | 57 PNG en 24 carpetas | sí | **beta** |
-| `aoe-yolo` | 57 PNG en 24 carpetas | sí (idéntico a `aoe`) | generado, hereda |
-| `starcraft` / `starcraft-yolo` | 0 | sí | en desarrollo |
-| `lol` / `lol-yolo` | 0 | sí | en desarrollo |
-| `cs16` / `cs16-yolo` | 0 | sí | en desarrollo |
-| `minecraft` / `minecraft-yolo` | 0 | no | a sumar |
+| `aoe` | 75 PNG en 24 carpetas | sí | **beta** |
+| `aoe-yolo` | 75 PNG en 24 carpetas | sí (idéntico a `aoe`) | generado, hereda |
+| `cs16` | 51 PNG en 24 carpetas | sí (idéntico) | generado (`gen_cs16.py`) |
+| `cs16-yolo` | 0 | sí | sin generar |
+| `minecraft` | 51 PNG en 24 carpetas | sí (idéntico) | generado (`gen_minecraft.py`) |
+| `starcraft` / `starcraft-yolo` | 50 / 0 | sí (idéntico) | generado (`gen_starcraft.py`) |
+| `lol` / `lol-yolo` | 50 / 0 | sí (idéntico) | generado (`gen_lol.py`) |
 
 ## Packs de sonido
 
@@ -54,17 +57,23 @@ extensión). Estado al 2026-11-08:
 | Juego | Carpeta | Audio | Eventos | `seleccion.json` | Tamaño | Estado |
 |---|---|---|---|---|---|---|
 | Age of Empires II | `sounds/aoe/` | 13 wav | 14 (1 repetido) | portable | 2,9 MB | **completo** (beta) |
-| Minecraft | `sounds/minecraft/` | 13 mp3 | 14 (12 únicos; `piston` sin uso) | portable | 568 KB | descargado, sin probar |
-| Counter-Strike 1.6 | `sounds/cs16/` | 12 wav | 14 (12 únicos) | portable | 405 KB | descargado, sin probar |
-| StarCraft | `sounds/starcraft/` | 14 mp3 | 14 (1:1) | portable | 408 KB | curado de `datas/starcraft/`, licencia sin verificar |
-| League of Legends | `sounds/lol/` | 14 mp3 | 14 (1:1) | portable | 583 KB | curado de `datas/lol/`, licencia sin verificar |
+| Minecraft | `sounds/minecraft/` | 13 wav | 14 (12 únicos; `piston` sin uso) | portable | 3,2 MB | convertido de mp3, probado |
+| Counter-Strike 1.6 | `sounds/cs16/` | 12 wav | 14 (12 únicos) | portable | 428 KB | probado |
+| StarCraft | `sounds/starcraft/` | 14 wav | 14 (1:1) | portable | 2,9 MB | convertido de mp3, licencia sin verificar |
+| League of Legends | `sounds/lol/` | 14 wav | 14 (1:1) | portable | 2,7 MB | convertido de mp3, licencia sin verificar |
 
 Total: 71 archivos (66 audio + 5 `seleccion.json`), 4 868 629 B (~4,64 MiB).
 
 StarCraft y LoL se curaron **por nombre**: un archivo distinto por evento,
-elegido entre los 20 mp3 de cada `datas/`. No hubo escucha crítica ni prueba en
-vivo. Los 28 mp3 son copias byte a byte de `datas/` con nombre corto, y no
-tienen licencia verificada (ver el aviso del README).
+elegido entre los 20 mp3 de cada `datas/`. No hubo escucha crítica. Los 28 mp3
+originales son copias byte a byte de `datas/` con nombre corto; para la suite se
+decodificaron a PCM 16 bit, 44,1 kHz, mono (misma duración, sin recorte) y
+siguen **sin licencia verificada** (ver el aviso del README).
+
+La razón del WAV no es preferencia: el runtime de notificaciones de gentle-pi
+valida el contenido antes de spawnear el backend y descarta cualquier cosa que
+no sea RIFF/WAVE entero PCM. Un pack MP3 no falla por el dispositivo de audio,
+falla por el contenedor.
 
 ### Mapeo StarCraft (`sounds/starcraft/`)
 

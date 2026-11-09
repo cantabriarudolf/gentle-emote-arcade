@@ -10,7 +10,7 @@ Powered by Gentle Shell. Fork de
 [cgxeiji/pi-emote](https://github.com/cgxeiji/pi-emote)— para reemplazar el
 Gentleman por sprites (y sonidos) de videojuegos.
 
-> **Estado: beta y creciendo.** El set `aoe` tiene las 24 escenas con movimiento (74 frames con nombres y gritos extra). `minecraft` y `cs16` ya tienen sus 51 frames dibujados por código; `starcraft` y `lol` tienen pack de audio pero sprites pendientes. Detalle, verificación y checklist en [`docs/BETA.md`](docs/BETA.md).
+> **Estado: los cinco sets están completos.** `aoe` y `aoe-yolo` tienen las 24 escenas dibujadas a mano con movimiento; `cs16`, `minecraft`, `starcraft` y `lol` tienen 24 escenas generadas por código en `scripts/sprites/` (51 y 50 frames respectivamente). Los cinco packs de audio son WAV PCM, que es lo único que la suite de notificaciones reproduce. Detalle, verificación y checklist en [`docs/BETA.md`](docs/BETA.md).
 
 ## Idea
 
@@ -152,7 +152,7 @@ base.
 2. **Sonido AoE**: la selección v2 está en `sounds/aoe/` pero todavía no está
    aplicada en la config viva de Gentle Shell (`notifications.json`); aplicarla
    con backup es un paso aparte, ver `docs/BETA.md`.
-3. **Sprites StarCraft y LoL**: ya tienen `emotes.json`, mapa de escenas y pack de audio; faltan los frames (hay generadores de ejemplo en `scripts/sprites/`).
+3. **Sprites StarCraft y LoL**: listos, 50 frames cada uno, generados por `gen_starcraft.py` y `gen_lol.py`.
 4. **Minecraft**: sprites listos; falta mapa de escenas propio y probar el pack en vivo.
 5. Licencia y remoto: ver checklist en `docs/BETA.md`. Incluye decidir qué
    pasa con los mp3 sin licencia verificada de StarCraft y LoL.
