@@ -51,7 +51,8 @@ Hoja rotulada del set `aoe`, con el nombre de la acción por imagen:
 
 Detalle 24 estados × 9 sets: [`docs/CATALOGO.md`](docs/CATALOGO.md).
 Serie completa por juego: `python3 scripts/scenes_demo.py` →
-`http://127.0.0.1:8785`.
+`http://127.0.0.1:8785` (en «Serie completa» podés subir la foto de
+referencia de cada estado; queda en `docs/refs/`).
 
 ## Sonido
 
