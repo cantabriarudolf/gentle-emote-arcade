@@ -1,12 +1,19 @@
-[![gentle-emote-arcade](docs/assets/logo.svg)](https://dharmatec.cl)
+<p align="center">
+  <img src="docs/assets/band.svg" alt="" width="100%">
+</p>
 
-# gentle-emote-arcade
+<h1 align="center">gentle-emote-arcade</h1>
+
+<p align="center">
+  <img alt="Licencia Apache-2.0" src="https://img.shields.io/badge/licencia-Apache--2.0-c0a062?labelColor=0a0a0b">
+  <img alt="Sets" src="https://img.shields.io/badge/sets-5%20completos-c9ccd1?labelColor=0a0a0b">
+</p>
 
 El avatar de Gentle Shell, dibujado con sprites de videojuegos y acompañado con
 los audios del mismo juego: la misma escena del agente, contada en imágenes y
 en sonido.
 
-Powered by Gentle Shell. Fork de
+Fork de
 [efolchmontiel/gentle-emote](https://github.com/efolchmontiel/gentle-emote)
 —que a su vez es fork de
 [cgxeiji/pi-emote](https://github.com/cgxeiji/pi-emote)— para reemplazar el
@@ -391,9 +398,9 @@ Advertencias verificadas en el código actual:
 - [`antigravity-pack/`](antigravity-pack/) — brief de arte: `LEEME.md`,
   `TANDA.md` (las 24 poses pedidas), `FUENTES.md` y `refs/`.
 
-## Licencia colaborativa
+## Licencia
 
-Licencia **MIT vigente** (ver [`LICENSE`](LICENSE)): el código, los sprites
+Licencia **Apache-2.0** vigente (ver [`LICENSE`](LICENSE)): el código, los sprites
 generados, la galería y los mapas se pueden usar, modificar y redistribuir
 libremente, manteniendo el aviso de copyright. Los audios y marcas de los
 juegos **no** entran en esa licencia (ver [Créditos y aviso](#créditos-y-aviso)).
@@ -422,12 +429,10 @@ publicidad alrededor del repo.
 - Personajes, nombres y audios de los juegos pertenecen a sus respectivos
   dueños (Microsoft, Blizzard, Riot Games, Valve, Mojang). Proyecto personal y
   experimental, sin relación con ellos.
-- Licencia MIT (`LICENSE`, 2026): cubre código, sprites generados, galería y mapas. Los audios y marcas de los juegos **no** entran en esa licencia (ver aviso arriba).
+- Licencia Apache-2.0 (`LICENSE`, 2026): cubre código, sprites generados, galería y mapas. Los audios y marcas de los juegos **no** entran en esa licencia (ver aviso arriba).
 - Los JPG crudos de referencia, los mp3 de trabajo, los previews y los logs no
   se versionan (ver [`.gitignore`](.gitignore)).
 
----
-Powered by Gentle Shell
 
 ## Sound profiles: misc pack, per-project game and invasiveness
 
@@ -435,3 +440,9 @@ Powered by Gentle Shell
 - Per-project game: map in `.pi/extensions/game-select/projects.json` (`{"<project-path>": {"juego": "<pack>", "invasividad": "todo|esencial|guardia"}}`), applied with `--proyecto` in `select_game.sh` / `apply_sounds.sh`.
 - Invasiveness levels: `todo` (14 events), `esencial` (12, all except `subagent.queued` + `subagent.running`), `guardia` (6 that ask for you: `agent.attention`, `agent.failed`, `subagent.waiting`, `subagent.failed`, `subagent.timed_out`, `context.high`). Excluded events are written as `null` so no stale sounds remain.
 - Easter egg: `gentle` is never listed (hidden from `juegos`, completions and demo), but typing `abuela` activates it. Activation plays `sounds/gentle/coin.wav` (currently a synthetic placeholder; replace with CC0 `coin-slot` by labailey, public domain arcade recording, see `sounds/gentle/seleccion.json`).
+
+---
+
+<p align="center">
+  <sub><strong>motor · Gentle Shell</strong> · Apache-2.0</sub>
+</p>
