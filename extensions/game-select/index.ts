@@ -3,7 +3,7 @@ import { existsSync, readFileSync, writeFileSync, readdirSync, appendFileSync } 
 import { join, dirname } from "node:path";
 import { execFile } from "node:child_process";
 
-const OCULTOS = new Set(["gentle", "abuela"]);
+const OCULTOS = new Set(["abuela"]);
 
 function setEmoteSet(path: string, juego: string): boolean {
   if (!existsSync(path)) return false;
