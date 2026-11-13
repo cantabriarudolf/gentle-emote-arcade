@@ -1,3 +1,5 @@
+[![gentle-emote-arcade](docs/assets/logo.svg)](https://dharmatec.cl)
+
 # gentle-emote-arcade
 
 El avatar de Gentle Shell, dibujado con sprites de videojuegos y acompañado con
@@ -45,13 +47,15 @@ Age of Empires II es el primer juego cerrado y el único publicable hoy:
 
 | Set | Juego | Estado |
 |---|---|---|
-| `aoe` | Age of Empires II | **beta**: `hi`, `think`, `idle` nuevos 48×40; `tool` y `success` ya animados |
-| `aoe-yolo` | AoE II, gemelo YOLO | generado desde `aoe` (ver [`emotes/aoe-yolo/README.md`](emotes/aoe-yolo/README.md)) |
-| `starcraft`, `starcraft-yolo` | StarCraft | en desarrollo: solo `emotes.json` |
-| `lol`, `lol-yolo` | League of Legends | en desarrollo: solo `emotes.json` |
-| `cs16`, `cs16-yolo` | Counter-Strike 1.6 | **sprites listos**: 51 frames por código (CT, pollo, C4, AWP) |
-| `starcraft`, `starcraft-yolo` | StarCraft | en desarrollo: solo `emotes.json` |
-| `minecraft`, `minecraft-yolo` | Minecraft | **sprites listos**: 51 frames por código (Steve, Enderman, Creeper, Golem) |
+| `aoe` | Age of Empires II | **beta**: 75 PNG en 24 carpetas (set base) |
+| `aoe-yolo` | AoE II, gemelo YOLO | generado desde `aoe`: 75 PNG |
+| `cs16` | Counter-Strike 1.6 | **sprites listos**: 51 frames por código (CT, pollo, C4, AWP) |
+| `cs16-yolo` | CS 1.6, gemelo YOLO | generado: 51 PNG |
+| `starcraft` | StarCraft | **sprites listos**: 50 frames por código |
+| `starcraft-yolo` | StarCraft, gemelo YOLO | generado: 50 PNG |
+| `lol` | League of Legends | **sprites listos**: 50 frames por código |
+| `lol-yolo` | LoL, gemelo YOLO | generado: 50 PNG |
+| `minecraft` | Minecraft | **sprites listos**: 51 frames por código (Steve, Enderman, Creeper, Golem) |
 
 ## Homenaje, sin afán de lucro
 
@@ -93,18 +97,18 @@ en [Sonido ↔ Sprite](#sonido--sprite)).
 | `failure` | Aldeano caído, polvo, espada clavada | Algo falló |
 | `compact` | Monje achicándose, túnica intacta | Compactación de contexto |
 | `delegate` | Monje repartiendo aldeanos a tareas | Subagentes genéricos |
-| `explore` | Caballería con linterna, huellas | Subagente explorador |
-| `build` | Herrera soldando el ariete | Subagente implementa |
+| `explore` | Camello arquero (explorador montado) | Subagente explorador |
+| `build` | Obra en construcción, 3 etapas (elefante + aldeano) | Subagente implementa |
 | `verify` | Guardián con escudo y sello verde | Subagente verifica |
 | `judge` | Monje con mazo, sentencia | Subagente juzga |
-| `review` | Monje con pluma roja y pergamino | Subagente revisa |
-| `jira` | Cohete de madera desde el castillo | Subagente Jira |
-| `jobs` | Aldeano tomando mate junto a la barra | Jobs en background |
-| `yolo` | Aldeano con vincha YOLO y cohete | Modo YOLO |
-| `super-yolo` | Aldeano YOLO con sol | Modo Super YOLO |
+| `review` | Torre de madera y piedra | Subagente revisa |
+| `jira` | Coliseo (maravilla) | Subagente Jira |
+| `jobs` | Aldeano minero junto a veta de oro, extrae | Jobs en background |
+| `yolo` | Auto cobra azul (sin barra) | Modo YOLO |
+| `super-yolo` | Auto cobra azul con barra verde (3 px) | Modo Super YOLO |
 | `remember` | Monje susurrando al oído del elefante | Guarda memoria en Engram |
 | `grandma` | Aldeana tejiendo junto a la granja | Idle largo (30s) |
-| `bye` | Aldeano sacándose el sombrero | Despedida |
+| `bye` | Aldeano de espaldas (sin sombrero) | Despedida |
 
 Frame representativo por estado (el resto de la animación queda en la
 carpeta del estado):
@@ -156,6 +160,30 @@ base.
 4. **Minecraft**: sprites listos; falta mapa de escenas propio y probar el pack en vivo.
 5. Licencia y remoto: ver checklist en `docs/BETA.md`. Incluye decidir qué
    pasa con los mp3 sin licencia verificada de StarCraft y LoL.
+
+## Catálogo de imágenes
+
+Catálogo por juego y estado: estado, acción que representa y ruta al thumbnail.
+El detalle completo (24 estados × 9 sets) está en [`docs/CATALOGO.md`](docs/CATALOGO.md);
+acá queda el resumen por set.
+
+| Set | Juego | Frames | Thumbnail (docs) |
+|---|---|---|---|
+| `aoe` | Age of Empires II | 75 | `docs/galeria/aoe.png`, `docs/scenes/<estado>.png` |
+| `aoe-yolo` | AoE II, gemelo YOLO | 75 | `emotes/aoe-yolo/<estado>/` (mismo arte base) |
+| `cs16` | Counter-Strike 1.6 | 51 | `emotes/cs16/<estado>/` |
+| `cs16-yolo` | CS 1.6, gemelo YOLO | 51 | `emotes/cs16-yolo/<estado>/` |
+| `starcraft` | StarCraft | 50 | `emotes/starcraft/<estado>/` |
+| `starcraft-yolo` | StarCraft, gemelo YOLO | 50 | `emotes/starcraft-yolo/<estado>/` |
+| `lol` | League of Legends | 50 | `emotes/lol/<estado>/` |
+| `lol-yolo` | LoL, gemelo YOLO | 50 | `emotes/lol-yolo/<estado>/` |
+| `minecraft` | Minecraft | 51 | `emotes/minecraft/<estado>/` |
+
+Los thumbnails en `docs/scenes/` y `docs/galeria/` existen hoy solo para `aoe`
+(`docs/scenes/<estado>.png` ×24 y `docs/galeria/aoe.png`); para el resto se
+abre la serie completa en [`docs/demo/index.html`](docs/demo/index.html)
+(`python3 scripts/scenes_demo.py`, puerto 8785) o se generan hojas con
+`python3 scripts/scenes_gallery.py --juego <set> --hoja`.
 
 ## Estructura
 
@@ -285,6 +313,12 @@ acompaña: imagen y audio cuentan el mismo momento. El mapa vigente sale de
 
 ## Instalación
 
+> El instalador local `instalar-emote-local.sh` sincroniza los 9 sets (incluidos
+> los gemelos `-yolo`: `cs16-yolo`, `starcraft-yolo`, `lol-yolo`, `aoe-yolo`)
+> a `.pi/extensions/gentle-emote/emotes/` y al directorio de usuario, junto con
+> `config.json` y el comando `/juego`.
+
+
 1. Copiar `emotes/` a
    `~/.gentle-shell/agent/extensions/gentle-emote/emotes/` (global) o a
    `<proyecto>/.pi/extensions/gentle-emote/emotes/` (por proyecto).
@@ -314,6 +348,10 @@ python3 gentle-emote-arcade/scripts/sprites/gen_aoe_yolo.py    # escribe /tmp/ge
 python3 /tmp/gen_yolo2.py                                      # recién ahí regenera aoe-yolo
 python3 gentle-emote-arcade/scripts/scenes_gallery.py          # galería ×4 -> docs/scenes/
 python3 gentle-emote-arcade/scripts/scenes_gallery.py --check  # verifica la galería, sin escribir
+python3 gentle-emote-arcade/scripts/scenes_gallery.py --juego aoe --hoja     # hoja de contactos -> docs/galeria/aoe.png
+python3 gentle-emote-arcade/scripts/scenes_gallery.py --juego aoe-yolo --hoja # hoja de contactos -> docs/galeria/aoe-yolo.png
+python3 gentle-emote-arcade/scripts/scenes_demo.py                           # demo por juego -> http://127.0.0.1:8785
+python3 gentle-emote-arcade/scripts/scenes_demo.py --check                    # valida catálogo sin servir
 ```
 
 `scenes_gallery.py` es el único que no toca `emotes/`: lee el frame
@@ -346,8 +384,30 @@ Advertencias verificadas en el código actual:
 - `docs/MAPA-ESCENAS-{starcraft,lol,cs16}.md` — idem por juego (en desarrollo).
 - [`docs/scenes/`](docs/scenes/) — galería ×4 (192×160) de las 24 escenas,
   solo para el README; la genera `scripts/scenes_gallery.py`.
+- [`docs/galeria/`](docs/galeria/) — hojas de contactos por juego (tiles ×4 con
+  viñeta de acción); las genera `scenes_gallery.py --juego <set> --hoja`.
+- [`docs/demo/index.html`](docs/demo/index.html) — demo por juego (serie
+  completa con viñetas); la sirve `scripts/scenes_demo.py` (puerto 8785).
 - [`antigravity-pack/`](antigravity-pack/) — brief de arte: `LEEME.md`,
   `TANDA.md` (las 24 poses pedidas), `FUENTES.md` y `refs/`.
+
+## Licencia colaborativa
+
+Licencia **MIT vigente** (ver [`LICENSE`](LICENSE)): el código, los sprites
+generados, la galería y los mapas se pueden usar, modificar y redistribuir
+libremente, manteniendo el aviso de copyright. Los audios y marcas de los
+juegos **no** entran en esa licencia (ver [Créditos y aviso](#créditos-y-aviso)).
+
+### Cómo contribuir
+
+- Abrí un issue o PR describiendo el cambio; cambios de arte van acompañados
+del generador que los produce (`scripts/sprites/`), no solo del PNG.
+- No subas audios sin licencia verificada ni archivos crudos de `datas/`,
+`previews/` o `lab/` (están en `.gitignore`).
+- Mantené el formato de frames (48×40 RGBA, una carpeta por estado) y corré
+`scripts/scenes_gallery.py --check` antes de enviar.
+- Respetá el homenaje sin afán de lucro: nada de venta, suscripción ni
+publicidad alrededor del repo.
 
 ## Créditos y aviso
 
@@ -368,3 +428,10 @@ Advertencias verificadas en el código actual:
 
 ---
 Powered by Gentle Shell
+
+## Sound profiles: misc pack, per-project game and invasiveness
+
+- Extra packs: `misc` (one event from each game pack, deterministic seed via `scripts/make_misc.py`) and hidden `gentle` (builtin `success`/`error`/`attention` tones, 7/14 events).
+- Per-project game: map in `.pi/extensions/game-select/projects.json` (`{"<project-path>": {"juego": "<pack>", "invasividad": "todo|esencial|guardia"}}`), applied with `--proyecto` in `select_game.sh` / `apply_sounds.sh`.
+- Invasiveness levels: `todo` (14 events), `esencial` (12, all except `subagent.queued` + `subagent.running`), `guardia` (6 that ask for you: `agent.attention`, `agent.failed`, `subagent.waiting`, `subagent.failed`, `subagent.timed_out`, `context.high`). Excluded events are written as `null` so no stale sounds remain.
+- Easter egg: `gentle` is never listed (hidden from `juegos`, completions and demo), but typing `abuela` activates it. Activation plays `sounds/gentle/coin.wav` (currently a synthetic placeholder; replace with CC0 `coin-slot` by labailey, public domain arcade recording, see `sounds/gentle/seleccion.json`).

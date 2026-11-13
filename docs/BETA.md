@@ -42,10 +42,28 @@ detalle del porqué, evento por evento, está en
 | `aoe` | 75 PNG en 24 carpetas | sí | **beta** |
 | `aoe-yolo` | 75 PNG en 24 carpetas | sí (idéntico a `aoe`) | generado, hereda |
 | `cs16` | 51 PNG en 24 carpetas | sí (idéntico) | generado (`gen_cs16.py`) |
-| `cs16-yolo` | 0 | sí | sin generar |
+| `cs16-yolo` | 51 PNG en 24 carpetas | sí (idéntico) | generado (`gen_cs16.py`) |
 | `minecraft` | 51 PNG en 24 carpetas | sí (idéntico) | generado (`gen_minecraft.py`) |
-| `starcraft` / `starcraft-yolo` | 50 / 0 | sí (idéntico) | generado (`gen_starcraft.py`) |
-| `lol` / `lol-yolo` | 50 / 0 | sí (idéntico) | generado (`gen_lol.py`) |
+| `starcraft` | 50 PNG en 24 carpetas | sí (idéntico) | generado (`gen_starcraft.py`) |
+| `starcraft-yolo` | 50 PNG en 24 carpetas | sí (idéntico) | generado (`gen_starcraft.py`) |
+| `lol` | 50 PNG en 24 carpetas | sí (idéntico) | generado (`gen_lol.py`) |
+| `lol-yolo` | 50 PNG en 24 carpetas | sí (idéntico) | generado (`gen_lol.py`) |
+
+## Instalador local
+
+`instalar-emote-local.sh` sincroniza los 9 sets (incluidos los gemelos `-yolo`)
+a `.pi/extensions/gentle-emote/emotes/` y al directorio de usuario, junto con
+`config.json` y el comando `/juego`.
+
+## Demo y galería
+
+- Galería por estado: `python3 scripts/scenes_gallery.py` escribe `docs/scenes/<estado>.png`
+  (×4, 192×160); `--check` verifica sin escribir.
+- Hoja por juego: `python3 scripts/scenes_gallery.py --juego <set> --hoja` escribe
+  `docs/galeria/<set>.png` (tiles ×4 con viñeta de acción).
+- Demo por juego: `python3 scripts/scenes_demo.py` sirve `docs/demo/index.html` en
+  `http://127.0.0.1:8785` con selector de 9 sets y serie completa; `--check`
+  valida el catálogo sin servir.
 
 ## Packs de sonido
 

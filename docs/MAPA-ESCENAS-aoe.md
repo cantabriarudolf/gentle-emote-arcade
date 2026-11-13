@@ -22,18 +22,18 @@ Una fila por estado del plugin. Tres columnas conceptuales:
 | 10 | `failure` | Algo falló | `rogan` / `generic-male-death2` — no entendió / muerte larga = grave | Aldeano caído, polvo, espada clavada | Villager death |
 | 11 | `compact` | Compactación de contexto | `interface-town-bell1` — la alarma suena en el pueblo | Monje achicándose, túnica intacta | Monk / Relic |
 | 12 | `delegate` | Subagentes genéricos | `wololo` — un subagente está en proceso | Monje repartiendo aldeanos a tareas | Monk + villager group |
-| 13 | `explore` | Subagente explorador | `wololo` | Caballería con linterna, huellas | Scout Cavalry |
-| 14 | `build` | Subagente implementa | `priestconversion` | Herrera soldando el ariete | Blacksmith / Siege |
+| 13 | `explore` | Subagente explorador | `wololo` | Camello arquero (explorador montado) | Camel Archer |
+| 14 | `build` | Subagente implementa | `priestconversion` | Obra en construcción, 3 etapas (elefante + aldeano) | Build site (3 stages) |
 | 15 | `verify` | Subagente verifica | `interface-menu-select` | Guardián con escudo y sello verde | Town Center |
 | 16 | `judge` | Subagente juzga | `interface-town-bell1` | Monje con mazo, sentencia | Monastery |
-| 17 | `review` | Subagente revisa | `farmexhausted` — recurso en revisión | Monje con pluma roja y pergamino | Monk / Market |
-| 18 | `jira` | Subagente Jira | `interface-victory` | Cohete de madera desde el castillo | Castle |
-| 19 | `jobs` | Jobs en background | `interface-population-limit` — bloqueado, necesita acción | Aldeano tomando mate junto a la barra | Mill / Farm |
-| 20 | `yolo` | Modo YOLO | `attack` — te están atacando, igual seguís | Aldeano con vincha YOLO y cohete | Wonder |
-| 21 | `super-yolo` | Modo Super YOLO | `attack` | Aldeano YOLO con sol | Wonder / sol |
+| 17 | `review` | Subagente revisa | `farmexhausted` — recurso en revisión | Torre de madera y piedra | Watch Tower |
+| 18 | `jira` | Subagente Jira | `interface-victory` | Coliseo (maravilla) | Wonder / Colosseum |
+| 19 | `jobs` | Jobs en background | `interface-population-limit` — bloqueado, necesita acción | Aldeano minero junto a veta de oro (pendiente: secuencia de extracción, ver T13) | Gold Mine / Mill |
+| 20 | `yolo` | Modo YOLO | `attack` — te están atacando, igual seguís | Auto cobra azul (sin barra) | Cobra car (YOLO) |
+| 21 | `super-yolo` | Modo Super YOLO | `attack` | Auto cobra azul con barra verde (3 px) | Cobra car (Super-YOLO) |
 | 22 | `remember` | Guarda memoria en Engram | — | Monje susurrando al oído del elefante | Monk + Elephant |
 | 23 | `grandma` | Idle largo (30s) | — | Aldeana tejiendo junto a la granja | Farm |
-| 24 | `bye` | Despedida | `interface-defeat` — la partida se acabó | Aldeano sacándose el sombrero | Villager idle |
+| 24 | `bye` | Despedida | `interface-defeat` — la partida se acabó | Aldeano de espaldas (sin sombrero) | Villager (back) |
 
 ## Eventos de sonido sin escena directa del plugin
 
