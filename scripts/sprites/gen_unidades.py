@@ -6,7 +6,7 @@ Cinco estados, todos loop de poses chicas:
   read/     scout a caballo con antorcha ......... 2 poses (antorcha izq / der)
   explore/  caballeria con farol ................. 2 poses (paso 1 / paso 2)
   build/    herrero soldando el ariete ........... 2 poses (chispa / sin chispa)
-  tool/     ariete de asalto empujado ............ 3 poses (atras / medio / adelante)
+  tool/     bateria de asedio ................... 4 poses (tensa/dispara/carga/suelta)
   jira/     castillo con cohete de madera ....... 2 poses (despegando / en el aire)
 
 Solo stdlib: struct + zlib (PNG 48x40 RGBA escrito a mano, sin PIL, sin red).
@@ -455,115 +455,110 @@ def scene_build(pose):
 
 
 # ------------------------------------------------------------------ 4. tool
-def tool_wheel(buf, cx, cy, phase):
-    """Rueda de 7 px con cuatro rayos que giran con la fase."""
-    disc(buf, cx, cy, 3, woodDD)
-    disc(buf, cx, cy, 2, wood)
+def tool_wheel(buf, cx, cy, r=3):
+    """Rueda maciza de madera con buje de hierro."""
+    disc(buf, cx, cy, r, woodDD)
+    disc(buf, cx, cy, r - 1, wood)
     setpx(buf, cx, cy, ironD)
-    spokes = {
-        0: ((2, 1), (-2, -1), (1, -2), (-1, 2)),
-        1: ((2, 0), (-2, 0), (0, 2), (0, -2)),
-        2: ((1, 2), (-1, -2), (-2, 1), (2, -1)),
-    }[phase]
-    for (dx, dy) in spokes:
-        line(buf, cx, cy, cx + dx, cy + dy, woodD)
+    setpx(buf, cx - 1, cy - 1, woodL)
 
 
-def tool_villager(buf, phase):
-    """Aldeano empujando el tronco del ariete desde atras."""
-    step = 1 if phase % 2 else 0
-    # botas y piernas
-    rect(buf, 1, 35, 4, 36, (60, 40, 20))
-    rect(buf, 5, 35, 8, 36, (60, 40, 20))
-    rect(buf, 2 - step, 32, 4 - step, 34, (74, 56, 32))
-    rect(buf, 5 + step, 32, 7 + step, 34, (74, 56, 32))
-    # tunica
-    rect(buf, 1, 23, 8, 31, (122, 90, 46))
-    hline(buf, 1, 8, 23, (94, 68, 32))
-    hline(buf, 1, 8, 29, (80, 55, 25))
-    setpx(buf, 4, 29, (60, 40, 20))
-    # cabeza y sombrero de paja
-    rect(buf, 2, 17, 7, 22, skin)
-    setpx(buf, 2, 19, skinD)
-    setpx(buf, 6, 19, ink)
-    setpx(buf, 3, 21, skinD)
-    rect(buf, 2, 13, 8, 14, (138, 106, 59))     # copa del sombrero
-    hline(buf, 2, 8, 13, (162, 128, 74))
-    rect(buf, 1, 15, 9, 16, (107, 79, 38))      # ala
-    setpx(buf, 2, 16, (138, 106, 59))
-    setpx(buf, 1, 15, (138, 106, 59))
+def tool_ground(buf):
+    hline(buf, 4, 43, 37, woodDD)
+    for x in (8, 20, 32, 40):
+        setpx(buf, x, 37, woodD)
+
+
+def tool_ballista(buf, fired):
+    """Ballesta mirando a la derecha: tensada o disparada (retroceso)."""
+    dx = -1 if fired else 0
+    tool_wheel(buf, 12 + dx, 33)
+    tool_wheel(buf, 30 + dx, 33)
+    hline(buf, 12 + dx, 30 + dx, 33, woodDD)
+    # viga central
+    rect(buf, 8 + dx, 24, 37 + dx, 25, wood)
+    hline(buf, 8 + dx, 37 + dx, 25, woodD)
+    # arco frontal en V
+    line(buf, 36 + dx, 15, 31 + dx, 24, woodD)
+    line(buf, 36 + dx, 33, 31 + dx, 24, woodD)
+    # fajas azules de amarre
+    for bx in (13, 24):
+        rect(buf, bx + dx, 22, bx + 1 + dx, 27, blue)
+        vline(buf, bx + dx, 22, 27, blueD)
+    rect(buf, 30 + dx, 22, 31 + dx, 26, blue)
+    # torno trasero
+    rect(buf, 5 + dx, 26, 8 + dx, 29, woodDD)
+    line(buf, 6 + dx, 29, 4 + dx, 31, ironD)
+    if not fired:
+        # cuerda tensa en V y virote cargado
+        line(buf, 36 + dx, 15, 27 + dx, 24, leather)
+        line(buf, 27 + dx, 24, 36 + dx, 33, leather)
+        hline(buf, 24 + dx, 39 + dx, 24, woodL)
+        rect(buf, 39 + dx, 23, 41 + dx, 25, ironD)
+        setpx(buf, 41 + dx, 24, iron)
+        setpx(buf, 40 + dx, 23, ironL)
+        setpx(buf, 25 + dx, 23, blue)
+        setpx(buf, 25 + dx, 25, blue)
+    else:
+        # cuerda suelta + virote en vuelo
+        vline(buf, 31 + dx, 15, 33, leather)
+        hline(buf, 36, 45, 24, woodL)
+        rect(buf, 43, 23, 45, 25, ironD)
+        setpx(buf, 45, 24, iron)
+        setpx(buf, 44, 23, ironL)
+        for (x, y) in ((33, 22), (31, 24), (34, 26)):
+            setpx(buf, x, y, smokeL)
+
+
+def tool_catapult(buf, loaded):
+    """Catapulta: cargada (brazo atrás, piedra en cuchara) o suelta (piedra en el aire)."""
+    tool_wheel(buf, 10, 32, r=4)
+    tool_wheel(buf, 30, 32, r=4)
+    hline(buf, 10, 30, 32, woodDD)
+    # bastidor
+    rect(buf, 6, 29, 36, 31, woodD)
+    hline(buf, 6, 36, 29, woodL)
+    # paño azul al costado
+    rect(buf, 28, 23, 35, 28, blue)
+    vline(buf, 28, 23, 28, blueD)
+    vline(buf, 35, 23, 28, blueD)
+    hline(buf, 28, 35, 23, blueL)
+    setpx(buf, 31, 26, blueD)
+    # montaje del pivote
+    px, py = 20, 22
+    rect(buf, px - 2, py - 2, px + 2, py + 2, woodDD)
+    setpx(buf, px, py, ironD)
+    if loaded:
+        ex, ey = 9, 30
+        line(buf, px, py, ex, ey, wood)
+        line(buf, px, py + 1, ex, ey + 1, woodD)
+        line(buf, ex - 2, ey, ex + 2, ey, woodDD)
+        disc(buf, ex, ey - 2, 2, stone)
+        setpx(buf, ex - 1, ey - 3, stoneL)
+    else:
+        ex, ey = 31, 9
+        line(buf, px, py, ex, ey, wood)
+        line(buf, px + 1, py, ex + 1, ey, woodD)
+        line(buf, ex - 1, ey + 2, ex + 2, ey, woodDD)
+        disc(buf, 38, 5, 2, stone)
+        setpx(buf, 37, 4, stoneL)
+        for (x, y) in ((34, 8), (32, 10), (35, 11)):
+            setpx(buf, x, y, smokeL)
 
 
 def scene_tool(pose):
-    """Ariete de asalto empujado: pose 1 atras, 2 medio, 3 adelante."""
+    """Batería de asedio en loop: 1 ballesta tensa, 2 ballesta dispara,
+    3 catapulta cargada, 4 catapulta suelta."""
     buf = canvas()
-    push = (0, 2, 4)[pose - 1]
-
-    # ---- ruedas y eje ----
-    tool_wheel(buf, 21, 33, (0, 1, 2)[pose - 1])
-    tool_wheel(buf, 31, 33, (1, 2, 0)[pose - 1])
-    rect(buf, 15, 28, 34, 28, woodDD)
-
-    # ---- caja del ariete ----
-    rect(buf, 14, 16, 36, 27, woodDD)
-    rect(buf, 15, 17, 35, 26, woodD)
-    for x in (19, 25, 31):
-        vline(buf, x, 17, 26, woodDD)
-    hline(buf, 15, 35, 17, (124, 92, 52))
-    # techo a dos aguas
-    for i in range(8):
-        y = 8 + i
-        half = 1 + (i * 11) // 7
-        rect(buf, 25 - half, y, 25 + half, y, wood)
-        setpx(buf, 25 - half, y, woodD)
-        setpx(buf, 25 - half + 1, y, woodL)
-        setpx(buf, 25 + half, y, woodD)
-    hline(buf, 13, 37, 15, woodL)
-    rect(buf, 15, 16, 16, 27, woodDD)          # poste trasero
-    rect(buf, 34, 16, 35, 27, woodDD)          # poste delantero
-    setpx(buf, 25, 7, goldD)
-
-    # ---- tronco del ariete (lo mas claro del cuadro) ----
-    tip = 37 + push
-    rect(buf, 9, 19, tip, 25, woodDD)
-    rect(buf, 9, 20, tip, 24, wood)
-    hline(buf, 10, tip, 20, woodL)
-    hline(buf, 10, tip, 23, woodD)
-    hline(buf, 10, tip, 24, woodD)
-    for x in (13, 19, 25, 31):
-        if x < tip:
-            vline(buf, x, 21, 22, woodD)
-    # fleje de hierro en la mitad del tronco
-    rect(buf, 28, 19, 29, 25, ironD)
-    setpx(buf, 28, 20, iron)
-    # cuerdas que lo atan a la caja
-    for x in (17, 33):
-        vline(buf, x, 19, 25, leatherD)
-        setpx(buf, x, 20, leather)
-    setpx(buf, 9, 21, leatherD)
-    setpx(buf, 9, 23, leatherD)
-    # punta de hierro
-    rect(buf, tip - 1, 18, tip + 1, 26, ironD)
-    rect(buf, tip, 19, tip + 1, 25, iron)
-    hline(buf, tip - 1, tip + 1, 18, ironL)
-    setpx(buf, tip - 1, 19, ironD)
-    setpx(buf, tip - 1, 25, ironD)
-    setpx(buf, tip + 1, 22, ironL)
-
-    # ---- aldeano empujando ----
-    tool_villager(buf, pose - 1)
-    rect(buf, 7, 21, 9, 23, skin)              # manos contra el tronco
-    setpx(buf, 7, 21, skinD)
-
-    # ---- impacto ----
-    if push:
-        for (dx, dy) in ((2, -1), (3, 1), (3, 4), (4, 2), (1, 3)):
-            setpx(buf, tip + dx, 22 + dy, clothD)
-    if push >= 4:
-        for (dx, dy) in ((4, -2), (4, 0), (4, 5), (2, -2), (3, 6)):
-            setpx(buf, tip + dx, 22 + dy, smokeL)
-        for (dx, dy) in ((3, -3), (4, -3), (4, 3), (3, 4)):
-            setpx(buf, tip + dx, 22 + dy, flame)
+    tool_ground(buf)
+    if pose == 1:
+        tool_ballista(buf, fired=False)
+    elif pose == 2:
+        tool_ballista(buf, fired=True)
+    elif pose == 3:
+        tool_catapult(buf, loaded=True)
+    else:
+        tool_catapult(buf, loaded=False)
     return buf
 
 
@@ -667,13 +662,18 @@ JOBS = [
     ("tool", "tool_01.png", scene_tool, 1),
     ("tool", "tool_02.png", scene_tool, 2),
     ("tool", "tool_03.png", scene_tool, 3),
+    ("tool", "tool_04.png", scene_tool, 4),
     ("jira", "jira_01.png", scene_jira, 1),
     ("jira", "jira_02.png", scene_jira, 2),
 ]
 
 
 def main():
+    import sys
+    solo = sys.argv[sys.argv.index("--solo") + 1] if "--solo" in sys.argv else None
     for state, name, draw, pose in JOBS:
+        if solo and state != solo:
+            continue
         directory = os.path.join(BASE, state)
         os.makedirs(directory, exist_ok=True)
         path = os.path.join(directory, name)

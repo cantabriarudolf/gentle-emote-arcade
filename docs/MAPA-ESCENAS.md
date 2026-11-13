@@ -16,7 +16,7 @@ Una fila por estado del plugin. Tres columnas conceptuales:
 | 4 | `talk` | El modelo responde | `rogan` — el aldeano responde al clic | Aldeano respondiendo | Villager ack |
 | 5 | `read` | Lee código/memoria | — | Caballería exploradora con antorcha | Scout Cavalry |
 | 6 | `write` | Edita código | — | Aldeano construyendo con andamio | Villager build |
-| 7 | `tool` | Ejecuta otras herramientas | — | Ariete golpeando | Battering Ram |
+| 7 | `tool` | Ejecuta otras herramientas | — | Ballesta tensa/dispara + catapulta carga/suelta | Ballista/Catapult |
 | 8 | `ask` | Pregunta sí/no en pantalla | `interface-menu-select` — click neutro de UI | Aldeano con globo Y/N | Villager selected |
 | 9 | `success` | Terminó bien | `priestconverted` — la unidad ya cambió de bando | Sacerdote con unidad convertida de rodillas | Conversion success |
 | 10 | `failure` | Algo falló | `rogan` / `generic-male-death2` — no entendió / muerte larga = grave | Aldeano caído, polvo, espada clavada | Villager death |
