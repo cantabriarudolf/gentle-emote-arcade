@@ -217,6 +217,46 @@
     background: #2a1712;
   }
 
+  .refs {
+    border-top: 1px dashed var(--borde-suave);
+    margin-top: 12px;
+    padding-top: 9px;
+    display: grid;
+    gap: 8px;
+  }
+
+  .refs-titulo {
+    color: var(--tenue);
+    font-size: 12px;
+  }
+
+  .refs-imgs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  img.ref {
+    display: block;
+    max-height: 140px;
+    max-width: 100%;
+    width: auto;
+    border: 1px solid var(--borde-suave);
+    border-radius: 8px;
+    background: #0e0c09;
+  }
+
+  .refs-subir {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    color: var(--tenue);
+    font-size: 12px;
+  }
+
+  .refs-subir input[type="file"] { max-width: 100%; }
+
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -225,7 +265,7 @@
     <div class="titulo">
       <h1>gentle-emote <span>· demo por juego</span></h1>
       <p>Serie completa de las 24 escenas en PNG crudos 48×40, escalados ×4 por CSS.
-         Cada viñeta indica la acción que hace el agente en ese estado.</p>
+         Cada viñeta indica la acción que hace el agente en ese estado.<br>En «Serie completa» podés subir la foto de referencia de cada estado.</p>
     </div>
     <div class="controles">
       <label class="campo" for="juego">Juego
@@ -257,6 +297,7 @@
   const cajaError = document.getElementById("error");
 
   let catalogo = null;
+  let refsPorClave = {};
   let pausado = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   let cancelaciones = [];
   const precargados = new Set();
@@ -383,6 +424,7 @@
         clip.frames.length + " frames · " + clip.frameMs + " ms · " + clip.cycle +
         " · " + clip.sprite));
       seccion.append(cabecera);
+      seccion.append(bloqueRef(juego, clip));
 
       const marcos = crear("div", "marcos");
       for (const frame of clip.frames) {
@@ -396,6 +438,68 @@
       frag.append(seccion);
     }
     return frag;
+  }
+
+  async function cargarRefs() {
+    refsPorClave = {};
+    try {
+      const respuesta = await fetch("/api/refs", { cache: "no-store" });
+      if (!respuesta.ok) return;
+      const datos = await respuesta.json();
+      for (const r of datos.refs || []) {
+        const clave = r.game + "/" + r.state;
+        (refsPorClave[clave] = refsPorClave[clave] || []).push(r);
+      }
+    } catch (err) { /* sin referencias: se sigue sin ellas */ }
+  }
+
+  function bloqueRef(juego, clip) {
+    const clave = juego.game + "/" + clip.state;
+    const cont = crear("div", "refs");
+    cont.append(crear("p", "refs-titulo",
+      "Referencia del juego (para replicar, no inventar):"));
+    const lista = crear("div", "refs-imgs");
+    for (const r of refsPorClave[clave] || []) {
+      const img = document.createElement("img");
+      img.className = "ref";
+      img.src = r.url;
+      img.alt = "referencia " + clip.state + " — " + r.file;
+      img.loading = "lazy";
+      img.decoding = "async";
+      lista.append(img);
+    }
+    cont.append(lista);
+    const fila = crear("label", "refs-subir");
+    fila.append(document.createTextNode("Subir foto de referencia: "));
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/png,image/jpeg,image/webp,image/gif";
+    const btn = crear("button", null, "Subir");
+    btn.type = "button";
+    btn.addEventListener("click", async () => {
+      if (!input.files.length) return;
+      btn.disabled = true;
+      try {
+        const f = input.files[0];
+        const resp = await fetch(
+          "/ref/" + encodeURIComponent(juego.game) + "/" +
+          encodeURIComponent(clip.state),
+          { method: "POST",
+            headers: { "Content-Type": f.type || "application/octet-stream" },
+            body: f });
+        if (!resp.ok) {
+          throw new Error("HTTP " + resp.status + " " + await resp.text());
+        }
+        await cargarRefs();
+        render();
+      } catch (err) {
+        resumen.textContent = "No se pudo subir (" + err.message + ").";
+      }
+      btn.disabled = false;
+    });
+    fila.append(input, btn);
+    cont.append(fila);
+    return cont;
   }
 
   function actualizarResumen(juego) {
@@ -451,6 +555,7 @@
       opt.textContent = juego.game;
       selJuego.append(opt);
     }
+    await cargarRefs();
     selJuego.value = (catalogo.games.find((g) => g.game === "aoe") ||
                       catalogo.games[0]).game;
     selJuego.disabled = false;

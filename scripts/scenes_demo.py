@@ -11,6 +11,9 @@ Rutas:
 - `/` y `/index.html`  -> `docs/demo/index.html`
 - `/api/juegos`        -> catálogo JSON (juegos, estados, frames y playback)
 - `/img/<juego>/<estado>/<frame>.png` -> PNG crudo (whitelist del catálogo)
+- `/api/refs` -> referencias subidas por estado
+- `/ref/<juego>/<estado>/<archivo>` -> referencia subida (solo lectura)
+- `POST /ref/<juego>/<estado>` -> sube la foto de referencia del estado (png/jpg/webp/gif, máx 3 MB)
 
 El playback (loop/pingpong y milisegundos por frame) sale de `emotes.json` de
 cada juego. Si un estado no trae entrada, se usan 500 ms y loop.
@@ -47,9 +50,12 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEFAULT_EMOTES = os.path.join(REPO_ROOT, "emotes")
 DEFAULT_INDEX = os.path.join(REPO_ROOT, "docs", "demo", "index.html")
 DEFAULT_MAPA = os.path.join(REPO_ROOT, "docs", "MAPA-ESCENAS-aoe.md")
+DEFAULT_REFS = os.path.join(REPO_ROOT, "docs", "refs")
 DEFAULT_PORT = 8785
 
 IMG_PREFIX = "/img/"
+REF_PREFIX = "/ref/"
+MAX_REF_BYTES = 3 * 1024 * 1024
 
 
 class DemoError(Exception):
@@ -231,6 +237,28 @@ def check_frame_parts(parts):
     return True
 
 
+def ref_tipo(body):
+    """(extensión, content-type) por magic bytes, o (None, None)."""
+    if body[:8] == b"\x89PNG\r\n\x1a\n":
+        return ("png", "image/png")
+    if body[:3] == b"\xff\xd8\xff":
+        return ("jpg", "image/jpeg")
+    if body[:4] == b"RIFF" and body[8:12] == b"WEBP":
+        return ("webp", "image/webp")
+    if body[:6] in (b"GIF87a", b"GIF89a"):
+        return ("gif", "image/gif")
+    return (None, None)
+
+
+def ref_pares_validos(catalog):
+    """(juego, estado) existentes en el catálogo."""
+    pares = set()
+    for game in catalog["games"]:
+        for clip in game["clips"]:
+            pares.add((game["game"], clip["state"]))
+    return pares
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = "EmoteScenesDemo/1.0"
 
@@ -238,6 +266,7 @@ class Handler(BaseHTTPRequestHandler):
     frame_keys = frozenset()
     emotes_dir = DEFAULT_EMOTES
     index_path = DEFAULT_INDEX
+    refs_dir = DEFAULT_REFS
 
     def log_message(self, fmt, *args):  # consola limpia, como el lab
         pass
@@ -293,12 +322,136 @@ class Handler(BaseHTTPRequestHandler):
             return
         self._send(200, body, "image/png")
 
+    def _api_refs(self):
+        items = []
+        pares = ref_pares_validos(self.catalog)
+        try:
+            juegos = sorted(os.listdir(self.refs_dir))
+        except OSError:
+            juegos = []
+        for game in juegos:
+            dir_juego = os.path.join(self.refs_dir, game)
+            if not os.path.isdir(dir_juego):
+                continue
+            for state in sorted(os.listdir(dir_juego)):
+                if (game, state) not in pares:
+                    continue
+                d = os.path.join(dir_juego, state)
+                if not os.path.isdir(d):
+                    continue
+                for name in sorted(os.listdir(d)):
+                    if not os.path.isfile(os.path.join(d, name)):
+                        continue
+                    items.append({
+                        "game": game, "state": state, "file": name,
+                        "url": "%s%s/%s/%s" % (
+                            REF_PREFIX, quote(game, safe=""),
+                            quote(state, safe=""), quote(name, safe=""))})
+        self._json(200, {"refs": items})
+
+    def _send_ref(self, path):
+        parts = path[len(REF_PREFIX):].split("/")
+        if not check_frame_parts(parts):
+            self._json(400, {"error": "ruta inválida: "
+                                      "/ref/<juego>/<estado>/<archivo>"})
+            return
+        game, state, name = parts
+        ext = name.rsplit(".", 1)[-1].lower() if "." in name else ""
+        tipos = {"png": "image/png", "jpg": "image/jpeg",
+                 "jpeg": "image/jpeg", "webp": "image/webp",
+                 "gif": "image/gif"}
+        if ext not in tipos:
+            self._json(400, {"error": "solo imágenes png/jpg/webp/gif"})
+            return
+        if (game, state) not in ref_pares_validos(self.catalog):
+            self._json(404, {"error": "juego/estado desconocido"})
+            return
+        base = os.path.realpath(self.refs_dir)
+        target = os.path.realpath(os.path.join(base, game, state, name))
+        if not target.startswith(base + os.sep):
+            self._json(400, {"error": "ruta fuera de refs"})
+            return
+        try:
+            with open(target, "rb") as fh:
+                body = fh.read()
+        except OSError:
+            self._json(404, {"error": "referencia inexistente"})
+            return
+        self._send(200, body, tipos[ext])
+
+    def _recv_ref(self, path):
+        parts = path[len(REF_PREFIX):].split("/")
+        if (len(parts) != 2 or any(not seg or seg != os.path.basename(seg)
+                                   or seg in (".", "..") or "\x00" in seg
+                                   for seg in parts)):
+            self._json(400, {"error": "ruta inválida: POST "
+                                      "/ref/<juego>/<estado> con la imagen "
+                                      "en el cuerpo"})
+            return
+        game, state = parts
+        if (game, state) not in ref_pares_validos(self.catalog):
+            self._json(404, {"error": "juego/estado desconocido"})
+            return
+        try:
+            largo = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            largo = 0
+        if largo <= 0 or largo > MAX_REF_BYTES:
+            self._json(413, {"error": "cuerpo vacío o mayor a 3 MB"})
+            return
+        try:
+            body = self.rfile.read(largo)
+        except OSError:
+            self._json(400, {"error": "no se pudo leer el cuerpo"})
+            return
+        if len(body) != largo:
+            self._json(400, {"error": "cuerpo incompleto"})
+            return
+        ext, _ctype = ref_tipo(body)
+        if ext is None:
+            self._json(415, {"error": "solo imágenes png/jpg/webp/gif"})
+            return
+        d = os.path.join(self.refs_dir, game, state)
+        try:
+            os.makedirs(d, exist_ok=True)
+        except OSError as exc:
+            self._json(500, {"error": "no se pudo crear la carpeta: %s" % exc})
+            return
+        n = sum(1 for x in os.listdir(d) if x.startswith("ref_")) + 1
+        while os.path.exists(os.path.join(d, "ref_%02d.%s" % (n, ext))):
+            n += 1
+        name = "ref_%02d.%s" % (n, ext)
+        tmp = os.path.join(d, ".tmp-" + name)
+        try:
+            with open(tmp, "wb") as fh:
+                fh.write(body)
+            os.replace(tmp, os.path.join(d, name))
+        except OSError as exc:
+            self._json(500, {"error": "no se pudo guardar: %s" % exc})
+            return
+        self._json(200, {"ok": True, "game": game, "state": state,
+                         "file": name,
+                         "url": "%s%s/%s/%s" % (
+                             REF_PREFIX, quote(game, safe=""),
+                             quote(state, safe=""), quote(name, safe=""))})
+
+    def do_POST(self):  # noqa: N802
+        path = unquote(urlparse(self.path).path)
+        if path.startswith(REF_PREFIX):
+            self._recv_ref(path)
+        else:
+            self._json(404, {"error": "ruta desconocida: %s" % path})
+
     def do_GET(self):  # noqa: N802
         path = unquote(urlparse(self.path).path)
         if path in ("/", "/index.html"):
             self._send_index()
         elif path == "/api/juegos":
             self._json(200, self.catalog)
+        elif path == "/api/refs":
+            self._api_refs()
+        elif path.startswith(REF_PREFIX):
+            self._send_ref(path)
         elif path.startswith(IMG_PREFIX):
             self._send_image(path)
         else:
@@ -308,7 +461,7 @@ class Handler(BaseHTTPRequestHandler):
         self.do_GET()
 
 
-def print_check(catalog, index_path):
+def print_check(catalog, index_path, refs_dir=None):
     print("demo: %d juego(s), %d frame(s), %d estado(s)"
           % (len(catalog["games"]), sum(g["totalFrames"]
                                         for g in catalog["games"]),
@@ -328,6 +481,10 @@ def print_check(catalog, index_path):
         print("error: falta el HTML del demo: %s" % index_path, file=sys.stderr)
         return 1
     print("mapa: %s" % catalog["mapa"])
+    if refs_dir is not None:
+        total_refs = sum(len(ficheros) for _, _, ficheros
+                         in os.walk(refs_dir)) if os.path.isdir(refs_dir) else 0
+        print("refs: %d archivo(s) en %s" % (total_refs, refs_dir))
     print("html: %s" % display_path(index_path))
     print("check: ok")
     return 0
@@ -352,6 +509,9 @@ def main(argv=None):
     parser.add_argument("--mapa", default=DEFAULT_MAPA,
                         help="mapa con las viñetas de acción "
                              "(por defecto docs/MAPA-ESCENAS-aoe.md)")
+    parser.add_argument("--refs-dir", default=DEFAULT_REFS,
+                        help="carpeta de fotos de referencia "
+                             "(por defecto docs/refs/)")
     parser.add_argument("--check", action="store_true",
                         help="valida sets, mapa y HTML; no sirve")
     args = parser.parse_args(argv)
@@ -363,7 +523,7 @@ def main(argv=None):
         return 2
 
     if args.check:
-        return 2 if print_check(catalog, args.index) else 0
+        return 2 if print_check(catalog, args.index, args.refs_dir) else 0
 
     if not os.path.isfile(args.index):
         print("error: falta el HTML del demo: %s" % args.index,
@@ -374,6 +534,7 @@ def main(argv=None):
     Handler.frame_keys = frozenset(frame_keys(catalog))
     Handler.emotes_dir = args.emotes_dir
     Handler.index_path = args.index
+    Handler.refs_dir = args.refs_dir
     try:
         httpd = ThreadingHTTPServer((args.host, args.port), Handler)
     except OSError as exc:

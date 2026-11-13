@@ -23,6 +23,8 @@ test/
 *.jpeg
 # Explícito para el brief de arte (ya cubierto por *.jpg):
 antigravity-pack/refs/*.jpg
+# ...pero las referencias subidas por el demo sí se versionan:
+!docs/refs/**
 
 # ── Logs de trabajo ─────────────────────────────────────────────────────────
 
