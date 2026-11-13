@@ -1,11 +1,18 @@
-[![gentle-emote-arcade](docs/assets/logo.svg)](https://dharmatec.cl)
+<p align="center">
+  <img src="docs/assets/band.svg" alt="" width="100%">
+</p>
 
-# gentle-emote-arcade
+<h1 align="center">gentle-emote-arcade</h1>
+
+<p align="center">
+  <img alt="Licencia Apache-2.0" src="https://img.shields.io/badge/licencia-Apache--2.0-c0a062?labelColor=0a0a0b">
+  <img alt="Sets" src="https://img.shields.io/badge/sets-5%20completos-c9ccd1?labelColor=0a0a0b">
+</p>
 
 El avatar y los sonidos de Gentle Shell, con sprites de videojuegos: cada cosa
 que hace el agente se ve y se escucha con el mismo juego.
 
-Powered by Gentle Shell. Fork de
+Fork de
 [efolchmontiel/gentle-emote](https://github.com/efolchmontiel/gentle-emote)
 (vía [cgxeiji/pi-emote](https://github.com/cgxeiji/pi-emote)).
 
@@ -61,9 +68,9 @@ El easter egg `abuela` activa el pack oculto con sonido de coin.
 2. Elegir set en `config.json`: `{ "emotes": [{ "model": "*", "emote-set": "aoe" }] }`.
 3. `/reload` y `/emote demo`.
 
-## Licencia colaborativa
+## Licencia
 
-MIT vigente ([`LICENSE`](LICENSE)): código, sprites, galería y mapas se pueden
+Apache-2.0 vigente ([`LICENSE`](LICENSE)): código, sprites, galería y mapas se pueden
 usar, modificar y redistribuir manteniendo el aviso. Para contribuir: un PR
 con el generador que produce el arte (`scripts/sprites/`), sin audios sin
 permiso y manteniendo 48×40 RGBA. Sin venta ni publicidad alrededor del repo.
@@ -73,4 +80,7 @@ Los audios y marcas de los juegos pertenecen a sus dueños (ver
 verificada: solo pruebas locales.
 
 ---
-Powered by Gentle Shell
+
+<p align="center">
+  <sub><strong>motor · Gentle Shell</strong> · Apache-2.0</sub>
+</p>
