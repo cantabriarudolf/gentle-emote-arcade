@@ -26,7 +26,7 @@ ciclo y no se borran):
                 success_03                       brazos arriba / brazos afuera
     failure/    down_01, down_02, down_03        caido de frente / de espaldas
     bye/        bye_01, bye_02, bye_03           saludo arriba / de espaldas
-    jobs/       jobs_01, jobs_02, jobs_03        tomando mate / mirando la barra
+    jobs/       jobs_01, jobs_02, jobs_03        minero: pico arriba / golpe / pepita
     grandma/    grandma_01, grandma_02,
                 grandma_03                       aldeana tejiendo (manos arriba/abajo)
     write/      write_01, write_02, write_03     martillo arriba / abajo
@@ -146,6 +146,12 @@ YARN = (198, 92, 90)
 YARN_D = (152, 62, 62)
 YARN_L = (228, 140, 136)
 NEEDLE = (182, 152, 100)
+# Oro de la veta del minero (jobs)
+GOLD = (216, 174, 48)
+GOLD_L = (248, 222, 104)
+GOLD_D = (168, 128, 28)
+GOLD_DD = (120, 92, 16)
+BRILLO = (252, 248, 200)
 
 
 # ── PNG (stdlib) ───────────────────────────────────────────────────────────
@@ -793,27 +799,88 @@ def frame_bye(n):
     return b
 
 
+def dib_pico(c, x, y, arriba=True):
+    """Pico de minero: mango de madera y cabeza de acero con dos puntas."""
+    if arriba:
+        line(c, x, y, x - 1, y - 7, WOOD, 1)
+        box(c, x - 3, y - 9, x + 1, y - 7, STEEL)
+        px(c, x - 4, y - 8, STEEL)          # punta izquierda
+        px(c, x + 2, y - 8, STEEL)          # punta derecha
+        box(c, x - 3, y - 9, x + 1, y - 9, STEEL_L)
+        px(c, x - 2, y - 8, STEEL_D)
+    else:
+        line(c, x, y, x + 2, y + 5, WOOD, 1)
+        box(c, x + 1, y + 5, x + 5, y + 7, STEEL)
+        px(c, x, y + 6, STEEL)               # punta izquierda
+        px(c, x + 6, y + 6, STEEL)           # punta derecha
+        box(c, x + 1, y + 5, x + 5, y + 5, STEEL_L)
+        px(c, x + 3, y + 6, STEEL_D)
+
+
+def dib_veta_oro(c, x, y):
+    """Monticulo dorado de la veta de oro, con brillos."""
+    # base rocosa del monticulo
+    ell(c, x + 5, y + 5, 6, 3, GOLD_D)
+    box(c, x + 1, y + 2, x + 9, y + 6, GOLD)
+    box(c, x + 2, y + 1, x + 8, y + 5, GOLD)
+    box(c, x + 1, y + 5, x + 9, y + 6, GOLD_D)
+    # vetas mas claras y grietas
+    box(c, x + 3, y + 2, x + 5, y + 4, GOLD_L)
+    px(c, x + 7, y + 3, GOLD_L)
+    px(c, x + 2, y + 5, GOLD_DD)
+    px(c, x + 6, y + 6, GOLD_DD)
+    # brillos (estrellitas de la piedra)
+    px(c, x + 2, y + 2, BRILLO)
+    px(c, x + 5, y + 1, BRILLO)
+    px(c, x + 8, y + 3, BRILLO)
+    px(c, x + 3, y + 4, BRILLO)
+    px(c, x + 7, y + 5, BRILLO)
+
+
+def dib_pepita(c, x, y):
+    """Pepita de oro recien extraida."""
+    box(c, x, y, x + 3, y + 2, GOLD)
+    box(c, x, y, x + 2, y, GOLD_L)
+    px(c, x + 3, y + 2, GOLD_D)
+    px(c, x + 1, y + 1, BRILLO)
+
+
+def dib_estrellitas(dst, puntos):
+    """Estrellitas de impacto/extraccion dibujadas sobre la capa final."""
+    for x, y in puntos:
+        px(dst, x, y, BRILLO)
+        px(dst, x - 1, y, GOLD_L)
+        px(dst, x + 1, y, GOLD_L)
+        px(dst, x, y - 1, GOLD_L)
+        px(dst, x, y + 1, GOLD_L)
+
+
 def frame_jobs(n):
     b = canvas()
     c = canvas()
-    if n == 1:  # tomando mate
+    if n == 1:  # pico arriba, listo para golpear
         cuerpo(c, mouth=0)
-        dib_mate(c, 29, 19)
+        dib_veta_oro(c, 33, 28)
         dib_brazo(c, [(19, 19), (18, 23), (18, 26)], (18, 27), lado=-1)
-        dib_brazo(c, [(28, 19), (30, 22), (29, 21)], (29, 21), lado=+1)
-        line(c, 30, 18, 26, 15, STEEL_D, 1)
-        px(c, 26, 15, STEEL)
+        dib_brazo(c, [(28, 19), (30, 15), (31, 12)], (31, 12), lado=+1)
+        dib_pico(c, 31, 12, arriba=True)
         pegar(b, c)
-        barra(b, 7)
-        px(b, 23, 11, SKIN_D)
-    else:  # mirando la barra
+    elif n == 2:  # golpe con estrellitas
         cuerpo(c, mouth=1)
-        dib_mate(c, 30, 23)
+        dib_veta_oro(c, 33, 28)
         dib_brazo(c, [(19, 19), (18, 23), (18, 26)], (18, 27), lado=-1)
-        dib_brazo(c, [(28, 19), (31, 23), (31, 25)], (31, 26), lado=+1)
-        line(c, 31, 22, 27, 18, STEEL_D, 1)
+        dib_brazo(c, [(28, 19), (31, 23), (33, 26)], (33, 26), lado=+1)
+        dib_pico(c, 33, 26, arriba=False)
         pegar(b, c)
-        barra(b, 10)
+        dib_estrellitas(b, ((36, 24), (38, 22), (40, 25), (37, 27)))
+    else:  # pepita extraida
+        cuerpo(c, mouth=2)
+        dib_veta_oro(c, 33, 28)
+        dib_brazo(c, [(19, 19), (18, 23), (18, 26)], (18, 27), lado=-1)
+        dib_brazo(c, [(28, 19), (30, 17), (31, 16)], (31, 16), lado=+1)
+        dib_pepita(c, 30, 16)
+        pegar(b, c)
+        dib_estrellitas(b, ((29, 15), (33, 15), (31, 13), (30, 19)))
     return b
 
 
@@ -918,7 +985,7 @@ FRAMES = [
              ("bye_03.png", lambda: frame_bye(1))]),
     ("jobs", [("jobs_01.png", lambda: frame_jobs(1)),
               ("jobs_02.png", lambda: frame_jobs(2)),
-              ("jobs_03.png", lambda: frame_jobs(1))]),
+              ("jobs_03.png", lambda: frame_jobs(3))]),
     ("grandma", [("grandma_01.png", lambda: frame_grandma(1)),
                  ("grandma_02.png", lambda: frame_grandma(2)),
                  ("grandma_03.png", lambda: frame_grandma(1))]),
