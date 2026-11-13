@@ -16,11 +16,15 @@ function setEmoteSet(path: string, juego: string): boolean {
   }
 }
 
+const HOME_DIR = process.env.HOME ?? process.env.USERPROFILE ?? "";
+
 function findArcade(cwd: string): string | null {
   const cands = [
     join(cwd, "gentle-emote-arcade"),
     join(dirname(cwd), "gentle-emote-arcade"),
-  ];
+    process.env.PI_ARCADE_DIR ?? "",
+    join(HOME_DIR, "Documentos", "Proyectos", "AoE", "gentle-emote-arcade"),
+  ].filter((c) => c.length > 0);
   for (const c of cands) {
     if (existsSync(join(c, "sounds")) && existsSync(join(c, "emotes"))) return c;
   }
