@@ -1,6 +1,7 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { existsSync, readFileSync, writeFileSync, readdirSync, appendFileSync } from "node:fs";
 import { join, dirname } from "node:path";
+import { execFile } from "node:child_process";
 
 const OCULTOS = new Set(["gentle", "abuela"]);
 
@@ -61,6 +62,28 @@ function traza(msg: string) {
   } catch {
     /* sin fs: no hay traza */
   }
+}
+
+function sonarCoin(arcade: string): Promise<void> {
+  const coin = join(arcade, "sounds", "gentle", "coin.wav");
+  if (!existsSync(coin)) return Promise.resolve();
+  const players: string[][] =
+    process.platform === "darwin"
+      ? [["afplay", coin]]
+      : [["paplay", coin], ["aplay", "-q", coin]];
+  return new Promise((resolve) => {
+    let done = false;
+    const fin = () => { if (!done) { done = true; resolve(); } };
+    const to = setTimeout(fin, 3000);
+    const intentar = (i: number): void => {
+      if (i >= players.length) { clearTimeout(to); fin(); return; }
+      execFile(players[i][0], players[i].slice(1), (err) => {
+        if (!err) { clearTimeout(to); fin(); }
+        else intentar(i + 1);
+      });
+    };
+    intentar(0);
+  });
 }
 
 const INV_PERMITIDOS: Record<string, Set<string>> = {
@@ -204,7 +227,7 @@ export default function (pi: ExtensionAPI) {
       if (!juego || !selPath || !existsSync(selPath)) {
         const lista = juegos.map((j, i) => `${i + 1}=${j}`).join("  ");
         ctx.ui?.notify?.(
-          `[juego] elegí número: /emote:juego <n> — ${lista}`,
+          `[juego] elegí número: /emote:juego <n> — ${lista} (arcade: ${arcade ?? "no encontrado"})`,
           "info",
         );
         return;
@@ -265,6 +288,7 @@ export default function (pi: ExtensionAPI) {
               eventos += 1;
             }
           }
+          if (juego === "gentle") await sonarCoin(arcade!);
           ev["session.shutdown"] = null;
           writeFileSync(livePath, JSON.stringify(live, null, 2));
         }
