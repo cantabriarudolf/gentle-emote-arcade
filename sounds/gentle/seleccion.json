@@ -1,0 +1,21 @@
+{
+  "schema": "gentle-emote-arcade.sounds/v1",
+  "soundsDir": "sounds/gentle",
+  "choices": {
+    "session.started": null,
+    "agent.started": null,
+    "agent.completed": "builtin:success",
+    "agent.failed": "builtin:error",
+    "agent.cancelled": null,
+    "agent.attention": "builtin:attention",
+    "subagent.queued": null,
+    "subagent.running": null,
+    "subagent.waiting": null,
+    "subagent.completed": "builtin:success",
+    "subagent.failed": "builtin:error",
+    "subagent.cancelled": null,
+    "subagent.timed_out": "builtin:error",
+    "context.high": "builtin:attention",
+    "activation": "coin"
+  }
+}

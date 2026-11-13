@@ -1,0 +1,20 @@
+{
+  "schema": "gentle-emote-arcade.sounds/v1",
+  "soundsDir": "sounds/misc",
+  "choices": {
+    "session.started": "minecraft/chest",
+    "agent.started": "cs16/go",
+    "agent.completed": "lol/penta-kill",
+    "agent.failed": "starcraft/base-attack",
+    "agent.cancelled": "aoe/malesounddeath5",
+    "agent.attention": "lol/missing",
+    "subagent.queued": "minecraft/villager-yes",
+    "subagent.running": "lol/triple-kill",
+    "subagent.waiting": "cs16/c4beep",
+    "subagent.completed": "starcraft/operational",
+    "subagent.failed": "aoe/generic-male-death3",
+    "subagent.cancelled": "cs16/fallback",
+    "subagent.timed_out": "cs16/getout",
+    "context.high": "starcraft/all-hands"
+  }
+}

@@ -3,8 +3,10 @@
 # Gentle Shell. El repo solo guarda nombres; el absoluto file: se resuelve acá,
 # en tu máquina, al aplicar. Orden: validar todo -> backup -> escribir.
 #
-# Uso: ./scripts/apply_sounds.sh [juego] [--dry-run]
-#       juego: aoe (default) | minecraft | cs16 | starcraft | lol
+# Uso: ./scripts/apply_sounds.sh [juego] [--proyecto RUTA] [--invasividad NIVEL] [--dry-run]
+#       juego: aoe (default) | minecraft | cs16 | starcraft | lol | misc | gentle | abuela
+#       --proyecto RUTA: lee el mapa .pi/extensions/game-select/projects.json
+#       --invasividad NIVEL: todo (default) | esencial | guardia
 #       -n, --dry-run: muestra el mapeo resuelto y NO toca la config viva.
 set -euo pipefail
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
@@ -12,21 +14,65 @@ LIVE="${GENTLE_NOTIFICATIONS_CONFIG:-$HOME/.gentle-shell/config/gentle-ai/notifi
 
 JUEGO=""
 DRY=0
-for arg in "$@"; do
-    case "$arg" in
-        -n|--dry-run) DRY=1 ;;
-        -h|--help) sed -n '2,8p' "$0"; exit 0 ;;
-        -*) echo "opción desconocida: $arg" >&2; exit 2 ;;
+PROYECTO=""
+INVASIVIDAD=""
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -n|--dry-run) DRY=1; shift ;;
+        -h|--help) sed -n '2,10p' "$0"; exit 0 ;;
+        --proyecto) PROYECTO="$2"; shift 2 ;;
+        --invasividad) INVASIVIDAD="$2"; shift 2 ;;
+        -*) echo "opción desconocida: $1" >&2; exit 2 ;;
         *)
             if [ -n "$JUEGO" ]; then
-                echo "juego de más: $arg" >&2
-                exit 2
+                echo "juego de más: $1" >&2; exit 2
             fi
-            JUEGO="$arg"
+            JUEGO="$1"; shift
             ;;
     esac
 done
+
+# Alias easter egg.
+case "$JUEGO" in
+    abuela) JUEGO="gentle" ;;
+esac
+
+# Mapa por proyecto (solo lectura; no se escribe en la config viva).
+if [ -n "$PROYECTO" ]; then
+    PROJECT_ROOT="$(cd "$REPO/.." && pwd)"
+    MAP="$PROJECT_ROOT/.pi/extensions/game-select/projects.json"
+    if [ -f "$MAP" ]; then
+        info="$(python3 - "$MAP" "$PROYECTO" <<'PY'
+import json, os, sys
+map_path, proj = sys.argv[1], sys.argv[2]
+try:
+    data = json.load(open(map_path, encoding="utf-8"))
+except Exception:
+    data = {}
+entry = None
+for key in (proj, os.path.abspath(proj), os.path.realpath(proj)):
+    if key in data:
+        entry = data[key]; break
+if not isinstance(entry, dict):
+    entry = {}
+print(entry.get("juego", ""))
+print(entry.get("invasividad", ""))
+PY
+)"
+        proj_juego="$(printf '%s\n' "$info" | sed -n '1p')"
+        proj_inv="$(printf '%s\n' "$info" | sed -n '2p')"
+        [ -n "$JUEGO" ] || JUEGO="$proj_juego"
+        [ -n "$INVASIVIDAD" ] || INVASIVIDAD="$proj_inv"
+    fi
+fi
+
 JUEGO="${JUEGO:-aoe}"
+INVASIVIDAD="${INVASIVIDAD:-todo}"
+case "$INVASIVIDAD" in
+    todo|esencial|guardia) ;;
+    *) echo "invasividad desconocida: $INVASIVIDAD" >&2; exit 2 ;;
+esac
+
 SEL="$REPO/sounds/$JUEGO/seleccion.json"
 [ -f "$SEL" ] || { echo "No existe $SEL" >&2; exit 1; }
 if [ "$DRY" -eq 0 ] && [ ! -f "$LIVE" ]; then
@@ -34,14 +80,13 @@ if [ "$DRY" -eq 0 ] && [ ! -f "$LIVE" ]; then
     exit 1
 fi
 
-python3 - "$SEL" "$LIVE" "$JUEGO" "$DRY" <<'PY'
+python3 - "$SEL" "$LIVE" "$JUEGO" "$DRY" "$INVASIVIDAD" "$REPO" <<'PY'
 import glob, json, os, shutil, stat, sys, time
 
-sel_path, live_path, juego, dry = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4] == "1"
+sel_path, live_path, juego, dry, invasividad, repo = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4] == "1", sys.argv[5], sys.argv[6]
 base = os.path.dirname(os.path.abspath(sel_path))
+sonidos_root = os.path.join(repo, "sounds")
 
-# Contrato de eventos de la suite (gentle-pi/docs/sound-notifications.md).
-# Si falta uno, aplicar el pack dejaría eventos apuntando al juego anterior.
 EVENTOS = (
     "session.started",
     "agent.started",
@@ -60,22 +105,57 @@ EVENTOS = (
 )
 EXTENSIONES = (".wav", ".ogg", ".flac", ".mp3")
 
+PERMITIDOS = {
+    "todo": set(EVENTOS),
+    "esencial": set(EVENTOS) - {"subagent.queued", "subagent.running"},
+    "guardia": {"agent.attention", "agent.failed", "subagent.waiting",
+                "subagent.failed", "subagent.timed_out", "context.high"},
+}
+
 
 def morir(msg, code=1):
     print("ERROR: " + msg, file=sys.stderr)
     sys.exit(code)
 
 
-def resolver(nombre):
-    """Resuelve el tallo igual que el selector: literal, .wav, luego el resto."""
+def resolver_builtin(nombre):
+    # nombre: "builtin:success" -> token (el builtin lo resuelve la suite).
+    return nombre
+
+
+def resolver_pack_stem(valor):
+    # "pack/tallo" -> ruta absoluta en sounds/<pack>/.
+    if "/" not in valor:
+        return None
+    pack, tallo = valor.split("/", 1)
+    base_pack = os.path.join(sonidos_root, pack)
+    for rel in (tallo,) + tuple(tallo + ext for ext in EXTENSIONES):
+        ruta = os.path.join(base_pack, rel)
+        if os.path.isfile(ruta):
+            return ruta
+    golpes = sorted(g for g in glob.glob(os.path.join(base_pack, tallo) + ".*") if os.path.isfile(g))
+    return golpes[0] if golpes else None
+
+
+def resolver_local(base, nombre):
     for rel in (nombre,) + tuple(nombre + ext for ext in EXTENSIONES):
         ruta = os.path.join(base, rel)
         if os.path.isfile(ruta):
             return ruta
-    golpes = sorted(
-        g for g in glob.glob(os.path.join(base, nombre) + ".*") if os.path.isfile(g)
-    )
+    golpes = sorted(g for g in glob.glob(os.path.join(base, nombre) + ".*") if os.path.isfile(g))
     return golpes[0] if golpes else None
+
+
+def resolver(valor):
+    if valor is None:
+        return None
+    if not isinstance(valor, str):
+        return None
+    if valor.startswith("builtin:"):
+        return valor
+    if "/" in valor:
+        return resolver_pack_stem(valor)
+    return resolver_local(base, valor)
 
 
 try:
@@ -110,7 +190,10 @@ if extras:
 plan = {}
 rotos = []
 for evento in EVENTOS:
-    nombre = str(choices[evento])
+    nombre = choices[evento]
+    if nombre is None:
+        plan[evento] = None
+        continue
     ruta = resolver(nombre)
     if ruta is None:
         rotos.append("%s -> %s" % (evento, nombre))
@@ -121,17 +204,28 @@ if rotos:
         "sin archivo en %s para: %s" % (base, "; ".join(rotos)),
         2,
     )
-mp3 = [ev for ev, ruta in plan.items() if not ruta.lower().endswith(".wav")]
+mp3 = [ev for ev, ruta in plan.items()
+       if isinstance(ruta, str) and not ruta.startswith("builtin:")
+       and not ruta.lower().endswith(".wav")]
 if mp3:
     print(
         "aviso: la suite solo reproduce RIFF/WAVE PCM; revisá: %s" % ", ".join(mp3),
         file=sys.stderr,
     )
 
+permitidos = PERMITIDOS[invasividad]
+
 if dry:
     for evento in EVENTOS:
-        print("%-20s %s" % (evento, os.path.basename(plan[evento])))
-    print("DRY-RUN: no toqué %s (%d eventos de %s)" % (live_path, len(plan), juego))
+        val = plan[evento]
+        if val is None:
+            estado = "null (silencio)"
+        elif evento not in permitidos:
+            estado = "null (invasividad %s)" % invasividad
+        else:
+            estado = os.path.basename(val) if not val.startswith("builtin:") else val
+        print("%-20s %s" % (evento, estado))
+    print("DRY-RUN: no toqué %s (%s, %s)" % (live_path, juego, invasividad))
     sys.exit(0)
 
 try:
@@ -150,8 +244,14 @@ shutil.copy2(live_path, backup)
 
 audio = live.setdefault("audio", {})
 eventos = audio.setdefault("events", {})
-for evento, ruta in plan.items():
-    eventos[evento] = "file:" + ruta
+for evento in EVENTOS:
+    val = plan[evento]
+    if evento not in permitidos or val is None:
+        eventos[evento] = None
+    elif isinstance(val, str) and val.startswith("builtin:"):
+        eventos[evento] = val
+    else:
+        eventos[evento] = "file:" + val
 eventos["session.shutdown"] = None
 
 modo = stat.S_IMODE(os.stat(live_path).st_mode)
@@ -168,5 +268,5 @@ finally:
         os.unlink(tmp)
 
 print("backup:", backup)
-print("aplicados", len(plan), "eventos de", juego, "desde", base)
+print("aplicados", sum(1 for e in EVENTOS if e in permitidos and plan[e] is not None), "eventos de", juego, "desde", base)
 PY
