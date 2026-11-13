@@ -1,10 +1,19 @@
-# gentle-emote-arcade
+<p align="center">
+  <img src="docs/assets/band.svg" alt="" width="100%">
+</p>
+
+<h1 align="center">gentle-emote-arcade</h1>
+
+<p align="center">
+  <img alt="Licencia Apache-2.0" src="https://img.shields.io/badge/licencia-Apache--2.0-c0a062?labelColor=0a0a0b">
+  <img alt="Sets" src="https://img.shields.io/badge/sets-5%20completos-c9ccd1?labelColor=0a0a0b">
+</p>
 
 El avatar de Gentle Shell, dibujado con sprites de videojuegos y acompañado con
 los audios del mismo juego: la misma escena del agente, contada en imágenes y
 en sonido.
 
-Powered by Gentle Shell. Fork de
+Fork de
 [efolchmontiel/gentle-emote](https://github.com/efolchmontiel/gentle-emote)
 —que a su vez es fork de
 [cgxeiji/pi-emote](https://github.com/cgxeiji/pi-emote)— para reemplazar el
@@ -349,6 +358,11 @@ Advertencias verificadas en el código actual:
 - [`antigravity-pack/`](antigravity-pack/) — brief de arte: `LEEME.md`,
   `TANDA.md` (las 24 poses pedidas), `FUENTES.md` y `refs/`.
 
+## Licencia
+
+**Apache-2.0** — permisiva, con atribución y concesión explícita de patentes. Ver
+[`LICENSE`](LICENSE).
+
 ## Créditos y aviso
 
 - Plugin original: [cgxeiji/pi-emote](https://github.com/cgxeiji/pi-emote) vía
@@ -362,9 +376,12 @@ Advertencias verificadas en el código actual:
 - Personajes, nombres y audios de los juegos pertenecen a sus respectivos
   dueños (Microsoft, Blizzard, Riot Games, Valve, Mojang). Proyecto personal y
   experimental, sin relación con ellos.
-- Licencia MIT (`LICENSE`, 2026): cubre código, sprites generados, galería y mapas. Los audios y marcas de los juegos **no** entran en esa licencia (ver aviso arriba).
+- Licencia Apache-2.0 (`LICENSE`, 2026): cubre código, sprites generados, galería y mapas. Los audios y marcas de los juegos **no** entran en esa licencia (ver aviso arriba).
 - Los JPG crudos de referencia, los mp3 de trabajo, los previews y los logs no
   se versionan (ver [`.gitignore`](.gitignore)).
 
 ---
-Powered by Gentle Shell
+
+<p align="center">
+  <sub><strong>motor · Gentle Shell</strong> · Apache-2.0</sub>
+</p>
