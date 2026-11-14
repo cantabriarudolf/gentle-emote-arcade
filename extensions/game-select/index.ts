@@ -4,8 +4,20 @@ import { join, dirname } from "node:path";
 import { execFile } from "node:child_process";
 
 const OCULTOS = new Set(["abuela"]);
+const JUEGOS_FALLBACK = ["aoe", "minecraft", "cs16", "starcraft", "lol", "misc"];
+const INVASIVIDADES = ["todo", "esencial", "guardia"];
+const DEFAULT_INVASIVIDAD = "todo";
 
-function setEmoteSet(path: string, juego: string): boolean {
+const HOME_DIR = process.env.HOME ?? process.env.USERPROFILE ?? "";
+
+export interface Opciones {
+  juego: string;
+  invasividad: string;
+  proyecto: string;
+  dryRun: boolean;
+}
+
+export function setEmoteSet(path: string, juego: string): boolean {
   if (!existsSync(path)) return false;
   try {
     const data = JSON.parse(readFileSync(path, "utf-8"));
@@ -17,9 +29,7 @@ function setEmoteSet(path: string, juego: string): boolean {
   }
 }
 
-const HOME_DIR = process.env.HOME ?? process.env.USERPROFILE ?? "";
-
-function findArcade(cwd: string): string | null {
+export function findArcade(cwd: string): string | null {
   const cands = [
     join(cwd, "gentle-emote-arcade"),
     join(dirname(cwd), "gentle-emote-arcade"),
@@ -30,6 +40,65 @@ function findArcade(cwd: string): string | null {
     if (existsSync(join(c, "sounds")) && existsSync(join(c, "emotes"))) return c;
   }
   return null;
+}
+
+/** Juegos disponibles: los packs con carpeta en `sounds/`, o la lista fija sin arcade. */
+export function listarJuegos(arcade: string | null): string[] {
+  if (!arcade) return [...JUEGOS_FALLBACK];
+  try {
+    const juegos = readdirSync(join(arcade, "sounds"), { withFileTypes: true })
+      .filter((d) => d.isDirectory())
+      .map((d) => d.name)
+      .filter((j) => !OCULTOS.has(j))
+      .sort();
+    return juegos.length > 0 ? juegos : [...JUEGOS_FALLBACK];
+  } catch {
+    return [...JUEGOS_FALLBACK];
+  }
+}
+
+/** Acepta nombre, prefijo unico, numero de la lista o el alias `abuela`. */
+export function resolverJuego(entrada: string, juegos: string[]): string {
+  const limpio = (entrada ?? "").trim().toLowerCase();
+  if (!limpio) return "";
+  const porNum = /^(\d+)$/.exec(limpio);
+  if (porNum) return juegos[parseInt(porNum[1], 10) - 1] ?? "";
+  const nombre = limpio === "abuela" ? "gentle" : limpio;
+  if (juegos.includes(nombre)) return nombre;
+  const hits = juegos.filter((j) => j.startsWith(nombre));
+  return hits.length === 1 ? hits[0] : "";
+}
+
+export function parseArgs(args: string, cwd: string): Opciones {
+  const tokens = (args ?? "").trim().split(/\s+/).filter(Boolean);
+  const opciones: Opciones = { juego: "", invasividad: "", proyecto: cwd, dryRun: false };
+  let i = 0;
+  while (i < tokens.length) {
+    const t = tokens[i];
+    if (t === "--invasividad") {
+      opciones.invasividad = tokens[i + 1] ?? "";
+      i += 2;
+      continue;
+    }
+    if (t === "--proyecto") {
+      opciones.proyecto = tokens[i + 1] ?? cwd;
+      i += 2;
+      continue;
+    }
+    if (t === "--dry-run" || t === "-n") {
+      opciones.dryRun = true;
+      i += 1;
+      continue;
+    }
+    if (!opciones.juego) opciones.juego = t;
+    else if (!opciones.invasividad && INVASIVIDADES.includes(t)) opciones.invasividad = t;
+    i += 1;
+  }
+  return opciones;
+}
+
+export function normalizarInvasividad(valor: string): string {
+  return INVASIVIDADES.includes(valor) ? valor : DEFAULT_INVASIVIDAD;
 }
 
 function findProjectMap(cwd: string, arcade: string | null): string | null {
@@ -64,7 +133,7 @@ function traza(msg: string) {
   }
 }
 
-function sonarCoin(arcade: string): Promise<void> {
+export function sonarCoin(arcade: string): Promise<void> {
   const coin = join(arcade, "sounds", "gentle", "coin.wav");
   if (!existsSync(coin)) return Promise.resolve();
   const players: string[][] =
@@ -111,7 +180,7 @@ const EVENTOS = [
   "subagent.timed_out", "context.high",
 ];
 
-function resolverArchivo(arcade: string, juego: string, nombre: string): string | null {
+export function resolverArchivo(arcade: string, juego: string, nombre: string): string | null {
   // builtin
   if (nombre.startsWith("builtin:")) return nombre;
   // pack/stem
@@ -146,6 +215,36 @@ function resolverArchivo(arcade: string, juego: string, nombre: string): string 
   return null;
 }
 
+/** Plan evento → archivo para un pack, sin tocar el disco. */
+export function planSonidos(
+  arcade: string,
+  juego: string,
+  invasividad: string,
+): { eventos: Record<string, string | null>; asignados: number } {
+  const selPath = join(arcade, "sounds", juego, "seleccion.json");
+  const permitidos = INV_PERMITIDOS[invasividad] ?? INV_PERMITIDOS.todo;
+  const eventos: Record<string, string | null> = {};
+  let asignados = 0;
+  let choices: Record<string, unknown> = {};
+  try {
+    const sel = JSON.parse(readFileSync(selPath, "utf-8"));
+    choices = sel?.choices ?? {};
+  } catch {
+    /* sin seleccion.json: todo queda en null */
+  }
+  for (const evento of EVENTOS) {
+    const nombre = choices[evento];
+    const resuelto = nombre == null ? null : resolverArchivo(arcade, juego, String(nombre));
+    if (!permitidos.has(evento) || resuelto == null) {
+      eventos[evento] = null;
+      continue;
+    }
+    eventos[evento] = resuelto;
+    asignados += 1;
+  }
+  return { eventos, asignados };
+}
+
 export default function (pi: ExtensionAPI) {
   traza(`cargo extension cwd=${process.cwd()}`);
   const home = process.env.HOME ?? process.env.USERPROFILE ?? "";
@@ -155,148 +254,97 @@ export default function (pi: ExtensionAPI) {
 
   const comando = {
     description:
-      "Cambiar de juego (sprites + sonidos): /emote:juego aoe|minecraft|cs16|starcraft|lol|misc|gentle(abuela)",
+      "Elegir juego (sprites + sonidos): /emote:juego abre el menu, o /emote:juego <juego|n> directo",
     getArgumentCompletions: (prefix: string) => {
       traza(`completions prefix=${JSON.stringify(prefix)}`);
-      const arcade = findArcade(cwd);
-      let juegos = ["aoe", "minecraft", "cs16", "starcraft", "lol", "misc"];
-      if (arcade) {
-        try {
-          juegos = readdirSync(join(arcade, "sounds"), { withFileTypes: true })
-            .filter((d) => d.isDirectory())
-            .map((d) => d.name)
-            .filter((j) => !OCULTOS.has(j));
-        } catch {
-          /* usa la lista fija */
-        }
-      }
-      return juegos
+      return listarJuegos(findArcade(cwd))
         .filter((j) => j.startsWith(prefix.trim()))
         .map((j) => ({ value: j, label: j, description: `Pack ${j}` }));
     },
     handler: async (args: string, ctx: any) => {
       traza(`handler args=${JSON.stringify(args)}`);
       const arcade = findArcade(cwd);
+      const opciones = parseArgs(args, cwd);
       const mapPath = findProjectMap(cwd, arcade);
+      const entry = readProjectEntry(mapPath, opciones.proyecto);
+      const juegos = listarJuegos(arcade);
 
-      // Parse args.
-      const tokens = args.trim().split(/\s+/).filter(Boolean);
-      let juego = "";
-      let invasividad = "";
-      let proyecto = cwd;
-      let i = 0;
-      while (i < tokens.length) {
-        const t = tokens[i];
-        if (t === "--invasividad") { invasividad = tokens[i + 1] ?? ""; i += 2; continue; }
-        if (t === "--proyecto") { proyecto = tokens[i + 1] ?? cwd; i += 2; continue; }
-        if (t === "--dry-run") { i += 1; continue; }
-        if (!juego) juego = t;
-        else if (!invasividad && (t === "todo" || t === "esencial" || t === "guardia")) invasividad = t;
-        i += 1;
-      }
+      let juego = resolverJuego(opciones.juego, juegos);
+      if (!juego && entry.juego) juego = resolverJuego(String(entry.juego), juegos);
 
-      // Project map defaults.
-      const entry = readProjectEntry(mapPath, proyecto);
-      if (!juego && entry.juego) juego = String(entry.juego);
-      if (!invasividad && entry.invasividad) invasividad = String(entry.invasividad);
+      let invasividad = normalizarInvasividad(
+        opciones.invasividad || (entry.invasividad ? String(entry.invasividad) : ""),
+      );
 
-      let juegos: string[] = ["aoe", "minecraft", "cs16", "starcraft", "lol", "misc"];
-      if (arcade) {
-        try {
-          juegos = readdirSync(join(arcade, "sounds"), { withFileTypes: true })
-            .filter((d) => d.isDirectory())
-            .map((d) => d.name)
-            .filter((j) => !OCULTOS.has(j))
-            .sort();
-        } catch { /* lista fija */ }
-      }
-      juego = (juego || "").trim().toLowerCase();
-      if (juego === "abuela") juego = "gentle";
-      const porNum = /^(\d+)$/.exec(juego);
-      if (porNum) juego = juegos[parseInt(porNum[1], 10) - 1] ?? "";
+      // Sin argumento: menu real; sin UI de seleccion, la lista numerada de siempre.
       if (!juego) {
-        const hit = juegos.filter((j) => j.startsWith(args.trim().toLowerCase()));
-        if (hit.length === 1) juego = hit[0];
+        if (typeof ctx?.ui?.select === "function") {
+          const titulo = arcade
+            ? "Elegí juego (sprites + sonidos):"
+            : "Elegí juego (arcade no encontrado, no se aplican sonidos):";
+          const elegido = await ctx.ui.select(titulo, juegos);
+          juego = resolverJuego(String(elegido ?? ""), juegos);
+        }
+        if (!juego) {
+          const lista = juegos.map((j, i) => `${i + 1}=${j}`).join("  ");
+          ctx.ui?.notify?.(
+            `[juego] elegí número: /emote:juego <n> — ${lista} (arcade: ${arcade ?? "no encontrado"})`,
+            "info",
+          );
+          return;
+        }
       }
-      if (!invasividad) invasividad = "todo";
-      if (!["todo", "esencial", "guardia"].includes(invasividad)) invasividad = "todo";
 
-      const selPath = arcade && juego
-        ? join(arcade, "sounds", juego, "seleccion.json")
-        : null;
-      if (!juego || !selPath || !existsSync(selPath)) {
-        const lista = juegos.map((j, i) => `${i + 1}=${j}`).join("  ");
+      // Sprites: gentle/misc usan arte de aoe.
+      const spritesJuego = juego === "gentle" || juego === "misc" ? "aoe" : juego;
+      const configs = [
+        join(agentDir, "extensions", "gentle-emote", "config.json"),
+        join(cwd, ".pi", "extensions", "gentle-emote", "config.json"),
+      ];
+      if (!opciones.dryRun) {
+        for (const p of configs) setEmoteSet(p, spritesJuego);
+      }
+
+      if (!arcade) {
         ctx.ui?.notify?.(
-          `[juego] elegí número: /emote:juego <n> — ${lista} (arcade: ${arcade ?? "no encontrado"})`,
+          `[juego] → ${juego} (solo sprites: arcade no encontrado, sin sonidos)`,
+          "warning",
+        );
+        return;
+      }
+
+      const { eventos, asignados } = planSonidos(arcade, juego, invasividad);
+
+      if (opciones.dryRun) {
+        ctx.ui?.notify?.(
+          `[juego] dry-run: ${juego} (${asignados} sonidos, ${invasividad}). No escribí nada.`,
           "info",
         );
         return;
       }
 
-      // Sprites: gentle/misc usan arte de aoe.
-      const spritesJuego = (juego === "gentle" || juego === "misc") ? "aoe" : juego;
-      for (const p of [
-        join(agentDir, "extensions", "gentle-emote", "config.json"),
-        join(cwd, ".pi", "extensions", "gentle-emote", "config.json"),
-      ]) {
-        setEmoteSet(p, spritesJuego);
-      }
-
-      let eventos = 0;
-      try {
-        const sel = JSON.parse(readFileSync(selPath, "utf-8"));
-        const base = join(arcade!, "sounds", juego);
-        const livePath = join(
-          home,
-          ".gentle-shell",
-          "config",
-          "gentle-ai",
-          "notifications.json",
-        );
-        if (existsSync(livePath)) {
-          const stamp = new Date()
-            .toISOString()
-            .replace(/[:.]/g, "")
-            .slice(0, 15);
-          writeFileSync(
-            `${livePath}.bak-${stamp}`,
-            readFileSync(livePath, "utf-8"),
-          );
+      const livePath = join(home, ".gentle-shell", "config", "gentle-ai", "notifications.json");
+      if (existsSync(livePath)) {
+        try {
+          const stamp = new Date().toISOString().replace(/[:.]/g, "").slice(0, 15);
+          writeFileSync(`${livePath}.bak-${stamp}`, readFileSync(livePath, "utf-8"));
           const live = JSON.parse(readFileSync(livePath, "utf-8"));
           live.audio = live.audio ?? {};
           live.audio.events = live.audio.events ?? {};
           const ev = live.audio.events;
-          const permitidos = INV_PERMITIDOS[invasividad] ?? INV_PERMITIDOS.todo;
-
-          const plan: Record<string, string | null> = {};
           for (const evento of EVENTOS) {
-            const nombre = sel.choices?.[evento];
-            if (nombre == null) { plan[evento] = null; continue; }
-            const resuelto = resolverArchivo(arcade!, juego, String(nombre));
-            plan[evento] = resuelto;
+            const val = eventos[evento];
+            ev[evento] = val == null ? null : val.startsWith("builtin:") ? val : `file:${val}`;
           }
-
-          for (const evento of EVENTOS) {
-            const val = plan[evento];
-            if (!permitidos.has(evento) || val == null) {
-              ev[evento] = null;
-            } else if (val.startsWith("builtin:")) {
-              ev[evento] = val;
-              eventos += 1;
-            } else {
-              ev[evento] = `file:${val}`;
-              eventos += 1;
-            }
-          }
-          if (juego === "gentle") await sonarCoin(arcade!);
           ev["session.shutdown"] = null;
           writeFileSync(livePath, JSON.stringify(live, null, 2));
+        } catch {
+          /* sin pack de sonidos: quedan solo los sprites */
         }
-      } catch {
-        /* sin pack de sonidos: quedan solo los sprites */
       }
+      if (juego === "gentle") await sonarCoin(arcade);
       ctx.ui?.notify?.(
-        `[juego] → ${juego} (sprites + ${eventos} sonidos, ${invasividad}). /reload para ver+oír.`,
+        `[juego] → ${juego} (sprites + ${asignados} sonidos, ${invasividad}). /reload para ver+oir.`,
         "info",
       );
     },

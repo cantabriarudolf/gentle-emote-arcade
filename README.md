@@ -64,12 +64,35 @@ schema `gentle-emote-arcade.sounds/v1`, 14 eventos). Extra: `misc`
 `scripts/select_game.sh <juego>` cambia sprites y sonidos con backup.
 El easter egg `abuela` activa el pack oculto con sonido de coin.
 
+## Elegir juego
+
+Dos caminos, los dos aplican sprites y sonidos juntos:
+
+- **Desde Gentle Shell**: `/emote:juego` abre el menú de packs y
+  `/emote:juego <juego>` lo aplica directo. Acepta el nombre (`aoe`, `cs16`,
+  `starcraft`, `lol`, `minecraft`, `misc`, `gentle`), un prefijo único o el
+  número de la lista. Banderas: `--invasividad todo|esencial|guardia` y
+  `--dry-run` (muestra el plan y no escribe nada).
+- **Desde la terminal**: `scripts/select_game.sh <juego>`, con las mismas
+  banderas (`--help` para el detalle).
+
+Los dos escriben el `emote-set` en el `config.json` global y de proyecto, y
+los `file:` de los 14 eventos en `~/.gentle-shell/config/gentle-ai/notifications.json`
+con backup fechado al lado. Después, `/reload` para ver y oír el cambio.
+
 ## Instalación
 
 1. Copiar `emotes/` a `~/.gentle-shell/agent/extensions/gentle-emote/emotes/`
    (global) o a `<proyecto>/.pi/extensions/gentle-emote/emotes/`.
 2. Elegir set en `config.json`: `{ "emotes": [{ "model": "*", "emote-set": "aoe" }] }`.
-3. `/reload` y `/emote demo`.
+3. Copiar `extensions/game-select/index.ts` a `<proyecto>/.pi/extensions/game-select/`.
+   Mejor symlink: `ln -sf "$PWD/extensions/game-select/index.ts" <proyecto>/.pi/extensions/game-select/index.ts`,
+   así el repo queda como única copia y no puede desincronizarse.
+4. `/reload` y `/emote demo`.
+
+Los tests de la extensión corren con el Node que trae Gentle Shell:
+`node --test tests/game-select.test.ts` (trabajan en un sandbox temporal, no
+tocan la config real).
 
 ## Licencia
 
