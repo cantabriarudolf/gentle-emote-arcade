@@ -301,22 +301,74 @@ def dib_coliseo(g, c):
     g.px(c, 30, 23, PIEDRA_D)
 
 
+def dib_cimientos(g, c):
+    """Etapa 1: zanja, cimientos de piedra y andamio con bloque colgando."""
+    terreno(g, c, 30, 37)
+    g.box(c, 10, 28, 38, 29, PIEDRA)
+    g.box(c, 10, 28, 38, 28, PIEDRA_L)
+    g.box(c, 12, 26, 36, 27, PIEDRA_D)
+    for x in (8, 20, 32, 42):
+        poste(g, c, x, 8, 30)
+    tronco(g, c, 6, 42, 12)
+    tronco(g, c, 6, 42, 20)
+    for i in range(6):                       # cuerda del bloque colgante
+        g.px(c, 24 + (i // 2), 12 + i, CUERDA)
+    g.box(c, 25, 18, 29, 21, PIEDRA)         # bloque colgando
+    g.box(c, 25, 18, 29, 18, PIEDRA_L)
+
+
+def dib_medio(g, c):
+    """Etapa 2: dos niveles abajo + andamio arriba con bloque en camino."""
+    terreno(g, c, 33, 37)
+    for y0, y1, x0, x1 in ((20, 25, 8, 39), (26, 33, 5, 42)):
+        g.box(c, x0, y0, x1, y1, PIEDRA)
+        g.box(c, x0, y0, x1, y0, PIEDRA_L)
+        g.box(c, x0, y1, x1, y1, PIEDRA_D)
+    for x, y in ((11, 21), (18, 21), (25, 21), (32, 21),
+                 (7, 27), (14, 27), (21, 27), (28, 27), (35, 27)):
+        g.box(c, x, y, x + 1, y + 3, VANO)
+        g.px(c, x, y, PIEDRA_L)
+        g.px(c, x + 1, y, PIEDRA_L)
+    for x in (8, 20, 32):
+        poste(g, c, x, 6, 19)
+    tronco(g, c, 6, 34, 9)
+    for i in range(5):                       # cuerda con bloque a medio izar
+        g.px(c, 27 + (i // 2), 10 + i, CUERDA)
+    g.box(c, 28, 15, 32, 18, PIEDRA)
+    g.box(c, 28, 15, 32, 15, PIEDRA_L)
+
+
+def dib_gloria(g, c):
+    """Etapa 3 terminada: rayos, banderas y estrella de maravilla."""
+    for i in range(5):                       # rayos desde arriba
+        g.px(c, 4 + i, 2 + i // 2, FUEGO)
+        g.px(c, 43 - i, 2 + i // 2, FUEGO)
+    for x, dx in ((3, 1), (43, -1)):
+        poste(g, c, x, 12, 30)
+        g.box(c, x + dx - (2 if dx < 0 else 0), 13,
+              x + dx + (2 if dx > 0 else 0), 16, VELA)
+    g.box(c, 22, 1, 26, 5, FUEGO)              # estrella
+    g.box(c, 23, 0, 25, 6, FUEGO)
+    g.px(c, 24, 2, VELA_L)
+    g.px(c, 24, 3, VELA_L)
+    for x, y in ((18, 25), (25, 22)):
+        g.box(c, x, y, x + 1, y + 2, FUEGO)
+
+
 def frame_jira(g, n):
     b = g.canvas()
     c = g.canvas()
-    pasto(g, c)
-    dib_coliseo(g, c)
-    dib_velas(g, c)
+    terreno(g, c, 33, 37)
+    if n == 1:
+        dib_cimientos(g, c)
+    elif n == 2:
+        dib_medio(g, c)
+    else:
+        pasto(g, c)
+        dib_coliseo(g, c)
+        dib_velas(g, c)
+        dib_gloria(g, c)
     g.pegar(b, c)
-    if n == 2:                               # marca: banderin y vanos activos
-        g.box(b, 17, 3, 22, 6, (212, 72, 60))
-        g.box(b, 17, 3, 22, 3, (238, 116, 96))
-        g.px(b, 16, 2, CUERDA)
-        g.px(b, 16, 4, CUERDA)
-        for x in (18, 25):
-            g.box(b, x, 22, x + 1, 24, FUEGO)    # vanos encendidos
-        g.px(b, 32, 28, FUEGO)
-        g.px(b, 14, 28, FUEGO)
     return b
 
 

@@ -84,48 +84,53 @@ def dib_rueda(g, c, cx, giro):
 
 
 def dib_carroceria(g, c):
-    """Silueta del deportivo: cola corta, cabina corrida y trompa baja."""
-    # perfil del auto, fila por fila (el frente queda a la derecha)
-    filas = ((13, 23, 27), (14, 21, 28), (15, 19, 29), (16, 18, 30),
-             (17, 17, 31), (18, 15, 33), (19, 12, 36), (20, 10, 38),
-             (21, 9, 38), (22, 9, 38), (23, 9, 38), (24, 10, 37),
-             (25, 11, 36))
-    for y, x0, x1 in filas:
-        g.box(c, x0, y, x1, y, AZUL)
-    # cabina: vidrio inclinado con parantes
-    g.box(c, 19, 15, 29, 17, VIDRIO)
-    g.box(c, 20, 15, 27, 15, VIDRIO_L)
-    g.box(c, 18, 15, 18, 17, AZUL_D)             # parante trasero
-    g.box(c, 30, 16, 30, 17, AZUL_L)             # parante delantero
-    g.box(c, 15, 18, 33, 18, AZUL_L)             # cintura iluminada
-    # franjas blancas dobles a lo largo del flanco
-    g.box(c, 10, 21, 37, 21, BLANCO)
-    g.box(c, 10, 23, 37, 23, BLANCO)
-    g.box(c, 10, 22, 37, 22, AZUL)
-    g.px(c, 37, 21, BLANCO_D)
-    g.px(c, 37, 23, BLANCO_D)
-    # cola: aleron, optica y escape
-    g.box(c, 12, 17, 17, 18, AZUL_D)
-    g.box(c, 13, 17, 16, 17, AZUL_L)
-    g.box(c, 12, 19, 12, 21, AZUL_DD)
-    g.box(c, 16, 19, 16, 21, AZUL_DD)
-    g.box(c, 9, 20, 10, 21, (196, 72, 58))       # optica trasera
-    g.box(c, 7, 25, 8, 25, AZUL_DD)              # escape
+    """Silueta estilizada: techo bajo, trompa larga y franjas anchas."""
+    # techo y cabina baja
+    g.box(c, 23, 12, 27, 12, AZUL_L)
+    g.box(c, 21, 13, 29, 13, AZUL)
+    g.box(c, 20, 14, 30, 16, VIDRIO)
+    g.box(c, 21, 14, 29, 14, VIDRIO_L)
+    g.box(c, 19, 15, 19, 16, AZUL_D)             # parante trasero
+    g.box(c, 30, 15, 30, 16, AZUL_L)             # parante delantero
+    # cintura y capot largo
+    g.box(c, 14, 17, 36, 17, AZUL_L)             # cintura iluminada
+    g.box(c, 13, 18, 38, 18, AZUL)
+    g.box(c, 12, 19, 40, 19, AZUL)
+    g.box(c, 12, 19, 40, 19, AZUL_L)
+    g.box(c, 11, 20, 40, 20, AZUL)
+    # franjas blancas anchas a lo largo del flanco
+    g.box(c, 9, 21, 41, 21, BLANCO)
+    g.box(c, 9, 22, 41, 22, AZUL)
+    g.box(c, 9, 23, 41, 23, BLANCO)
+    g.px(c, 41, 21, BLANCO_D)
+    g.px(c, 41, 23, BLANCO_D)
+    # bajos
+    g.box(c, 10, 24, 40, 24, AZUL)
+    g.box(c, 11, 25, 39, 25, AZUL)
+    g.box(c, 13, 26, 37, 26, AZUL_D)
+    # cola corta: aleron, optica y doble escape
+    g.box(c, 8, 16, 12, 17, AZUL_D)
+    g.box(c, 8, 16, 12, 16, AZUL_L)
+    g.box(c, 8, 19, 8, 21, AZUL_DD)
+    g.box(c, 8, 21, 9, 22, (196, 72, 58))        # optica trasera
+    g.box(c, 6, 25, 7, 25, AZUL_DD)              # escapes
+    g.box(c, 6, 26, 7, 26, AZUL_DD)
     g.px(c, 6, 25, (128, 128, 138))
+    g.px(c, 6, 26, (128, 128, 138))
     # marca YOLO del set (calcomania magenta en la puerta)
-    g.px(c, 20, 22, g.MAGENTA)
-    g.px(c, 21, 22, g.MAGENTA_D)
+    g.px(c, 25, 20, g.MAGENTA)
+    g.px(c, 26, 20, g.MAGENTA_D)
 
 
 def dib_detalles(g, c):
-    """Faros, parrilla y linea de puerta, por delante de las ruedas."""
-    g.box(c, 36, 20, 37, 21, FARO)               # faro delantero
-    g.px(c, 37, 20, (255, 252, 200))
-    g.box(c, 37, 24, 38, 25, AZUL_DD)            # parrilla
-    g.box(c, 34, 19, 37, 19, AZUL_L)             # filo del capot
-    g.box(c, 24, 19, 24, 24, AZUL_D)             # linea de puerta
-    g.px(c, 25, 19, LLANTA)                      # manija
-    g.px(c, 11, 24, AZUL_D)                      # salida de aire
+    """Faro, parrilla y linea de puerta, por delante de las ruedas."""
+    g.box(c, 39, 20, 40, 21, FARO)               # faro delantero
+    g.px(c, 40, 20, (255, 252, 200))
+    g.box(c, 40, 24, 41, 25, AZUL_DD)            # parrilla
+    g.box(c, 12, 19, 40, 19, AZUL_L)             # filo del capot
+    g.box(c, 26, 19, 26, 24, AZUL_D)             # linea de puerta
+    g.px(c, 27, 19, LLANTA)                      # manija
+    g.px(c, 36, 24, AZUL_D)                      # toma de aire
 
 
 def dib_barra(g, b):

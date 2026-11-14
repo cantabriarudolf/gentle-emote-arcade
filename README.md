@@ -45,6 +45,8 @@ Elenco AoE: aldeano musculoso, monje, camello explorador, cobra azul
 
 ## Galería (arte actual)
 
+![casco emblema](docs/assets/casco.png)
+
 Hoja rotulada del set `aoe`, con el nombre de la acción por imagen:
 
 ![galería aoe](docs/galeria/aoe.png)

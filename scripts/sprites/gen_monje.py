@@ -314,38 +314,109 @@ def monje_whisper_out(buf):
     for (x,y) in [(37,12),(38,13),(38,14),(37,15)]: setpx(buf,x,y,gold)
     for (x,y) in [(40,9),(41,10),(41,11),(41,12),(40,13)]: setpx(buf,x,y,gold)
 
+def relicario(buf, cx, cy, brillo):
+    """Relicario dorado con cruz; brillo suma destellos."""
+    rect(buf, cx - 3, cy - 4, cx + 3, cy + 4, (150, 110, 45))
+    rect(buf, cx - 2, cy - 3, cx + 2, cy + 3, gold)
+    rect(buf, cx - 2, cy - 3, cx + 2, cy - 2, goldL)
+    rect(buf, cx - 1, cy - 1, cx + 1, cy + 2, (150, 110, 45))
+    setpx(buf, cx, cy, goldL)
+    setpx(buf, cx, cy - 1, (255, 240, 180))
+    pts = ((-5, -5), (5, -5), (-6, 0), (6, 0), (-5, 5), (5, 5)) if brillo else ((-5, -5), (5, -5))
+    for (dx, dy) in pts:
+        setpx(buf, cx + dx, cy + dy, goldL)
+
+
+def nicho(buf, cx, cy):
+    """Hornacina de piedra con arco para entronizar la reliquia."""
+    rect(buf, cx - 7, cy - 9, cx + 7, cy + 8, dark)
+    rect(buf, cx - 6, cy - 8, cx + 6, cy + 7, (52, 42, 28))
+    rect(buf, cx - 5, cy - 7, cx + 5, cy + 6, (36, 28, 18))
+    for dx, w in ((-4, 9), (-3, 7), (-2, 5), (-1, 3)):
+        pass
+    for i, dx in enumerate((4, 3, 2, 1)):
+        y = cy - 8 - i
+        if y >= 0:
+            for x in range(cx - dx, cx + dx + 1):
+                setpx(buf, x, y, (52, 42, 28))
+
+
 def remember_01():
     buf=canvas(); monje_torso(buf); monje_hood(buf); monje_face(buf)
-    monje_arm_left_down(buf); monje_whisper_in(buf)
+    monje_arm_left_down(buf); monje_arm_right_down(buf)
+    relicario(buf, 38, 24, False)
     return buf
 
 def remember_02():
     buf=canvas(); monje_torso(buf); monje_hood(buf); monje_face(buf)
-    monje_arm_left_down(buf); monje_whisper_out(buf)
-    return buf
-
-def monje_neutral():
-    buf=canvas()
-    monje_torso(buf); monje_hood(buf); monje_face(buf)
     monje_arm_left_down(buf); monje_arm_right_down(buf)
+    nicho(buf, 38, 24)
+    relicario(buf, 38, 25, True)
     return buf
 
 def compact_01():
-    return monje_neutral()
+    buf=canvas()
+    rect(buf, 9, 9, 39, 33, dark)
+    rect(buf, 10, 10, 38, 32, parch)
+    for y in (14, 18, 22, 26):
+        rect(buf, 14, y, 34, y, parchInk)
+    rect(buf, 14, 30, 22, 30, parchInk)
+    rect(buf, 4, 18, 8, 24, skin)
+    rect(buf, 40, 18, 44, 24, skin)
+    setpx(buf, 4, 21, skinD); setpx(buf, 44, 21, skinD)
+    return buf
 
 def compact_02():
-    src=monje_neutral()
-    buf=canvas(); paste_scaled(buf,src)
+    buf=canvas()
+    rect(buf, 5, 18, 8, 22, woodD)
+    rect(buf, 40, 18, 43, 22, woodD)
+    rect(buf, 8, 14, 40, 26, dark)
+    rect(buf, 9, 15, 39, 25, parch)
+    rect(buf, 9, 18, 39, 18, parchD)
+    rect(buf, 9, 22, 39, 22, parchD)
+    rect(buf, 22, 24, 28, 30, dark)
+    rect(buf, 23, 25, 27, 29, green)
+    rect(buf, 23, 25, 27, 25, greenL)
+    for (x, y) in ((24, 27), (25, 28), (26, 27), (27, 26), (28, 25)):
+        setpx(buf, x, y, steel)
+        setpx(buf, x, y + 1, steel)
+    rect(buf, 22, 30, 23, 36, red)
+    rect(buf, 26, 30, 27, 36, redD)
     return buf
+
+TRAZO1 = ((30, 19), (31, 20), (32, 21), (33, 22), (34, 23))
+TRAZO2 = ((34, 23), (35, 22), (36, 21), (37, 20), (38, 19), (39, 18))
+
+def escudo_grande(buf):
+    rect(buf, 26, 12, 44, 30, dark)
+    rect(buf, 27, 13, 43, 29, shieldC)
+    hline = None
+    for x in range(27, 44):
+        setpx(buf, x, 13, shieldL)
+    for (y, x0, x1) in ((30, 29, 41), (31, 31, 39), (32, 33, 37), (33, 34, 36)):
+        for x in range(x0, x1 + 1):
+            setpx(buf, x, y, shieldC)
+        setpx(buf, x0 - 1, y, dark); setpx(buf, x1 + 1, y, dark)
+
+def tilde(buf, trazos, col):
+    for x, y in trazos:
+        setpx(buf, x, y, col)
+        setpx(buf, x, y + 1, col)
 
 def verify_01():
     buf=canvas(); monje_torso(buf); monje_hood(buf); monje_face(buf)
     monje_shield(buf); monje_seal_up(buf)
+    escudo_grande(buf)
+    tilde(buf, TRAZO1, green)
     return buf
 
 def verify_02():
     buf=canvas(); monje_torso(buf); monje_hood(buf); monje_face(buf)
     monje_shield(buf); monje_seal_down(buf)
+    escudo_grande(buf)
+    tilde(buf, TRAZO1 + TRAZO2, greenL)
+    for (x, y) in ((29, 15), (41, 24), (31, 27)):
+        setpx(buf, x, y, shieldW)
     return buf
 
 # ===================== salida + verificacion =====================
