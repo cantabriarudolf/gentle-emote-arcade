@@ -3,7 +3,7 @@
 # Uso: ./scripts/select_game.sh [juego] [--proyecto RUTA] [--invasividad NIVEL] [--dry-run]
 #       juego: aoe (default) | minecraft | cs16 | starcraft | lol | misc | gentle | abuela
 #       --proyecto RUTA: lee el mapa .pi/extensions/game-select/projects.json
-#       --invasividad NIVEL: todo | esencial | guardia
+#       --invasividad NIVEL: todo|a (14) | esencial|b (12) | guardia|c (6)
 #       -n, --dry-run: no escribe ninguna config (sprites ni sonidos).
 # Requiere: sounds/<juego>/seleccion.json (portable, solo nombres) y
 # emotes/<juego>/ (si aún no tiene arte, el plugin usa lo que haya).
@@ -63,10 +63,16 @@ PY
 fi
 
 JUEGO="${JUEGO:-aoe}"
+# El menu llama a los sets a, b y c: se aceptan como alias del nivel.
+case "$INVASIVIDAD" in
+    a|A) INVASIVIDAD="todo" ;;
+    b|B) INVASIVIDAD="esencial" ;;
+    c|C) INVASIVIDAD="guardia" ;;
+esac
 INVASIVIDAD="${INVASIVIDAD:-todo}"
 case "$INVASIVIDAD" in
     todo|esencial|guardia) ;;
-    *) echo "invasividad desconocida: $INVASIVIDAD" >&2; exit 2 ;;
+    *) echo "invasividad desconocida: $INVASIVIDAD (usá a|b|c o todo|esencial|guardia)" >&2; exit 2 ;;
 esac
 SEL="$REPO/sounds/$JUEGO/seleccion.json"
 [ -f "$SEL" ] || { echo "No existe $SEL" >&2; exit 1; }
@@ -75,9 +81,10 @@ echo "=== Sprites -> $JUEGO ==="
 if [ "$DRY" -eq 1 ]; then
     echo "(dry-run: no toco la config de sprites)"
 else
-    # gentle usa sprites de aoe (easter egg sin arte propio).
+    # `misc` es sólo sonidos mezclados: hereda el arte de aoe. `gentle` tiene
+    # sus propias escenas (fork upstream).
     SPRITES_JUEGO="$JUEGO"
-    if [ "$JUEGO" = "gentle" ] || [ "$JUEGO" = "misc" ]; then
+    if [ "$JUEGO" = "misc" ]; then
         SPRITES_JUEGO="aoe"
     fi
     python3 - "$SPRITES_JUEGO" "$REPO" <<'PY'
@@ -132,5 +139,33 @@ if [ "$DRY" -eq 1 ]; then
 fi
 "$REPO/scripts/apply_sounds.sh" "${ARGS[@]}"
 if [ "$DRY" -eq 0 ]; then
+    # `gentle` (alias `abuela`) suena su activación al quedar aplicado: la primera
+    # toma de `activacionVariantes` del pack, con el coin como fallback.
+    if [ "$JUEGO" = "gentle" ]; then
+        ACTIVACION="$(python3 - "$REPO/sounds/gentle" <<'PY'
+import json, os, sys
+base = sys.argv[1]
+nombres = []
+try:
+    sel = json.load(open(os.path.join(base, "seleccion.json"), encoding="utf-8"))
+    if isinstance(sel.get("activacionVariantes"), list) and sel["activacionVariantes"]:
+        nombres = [str(n) for n in sel["activacionVariantes"]]
+    elif isinstance(sel.get("activation"), str):
+        nombres = [sel["activation"]]
+except Exception:
+    pass
+for nombre in nombres or ["coin"]:
+    for rel in (nombre, nombre + ".wav"):
+        ruta = os.path.join(base, rel)
+        if os.path.isfile(ruta):
+            print(ruta)
+            raise SystemExit
+PY
+)"
+        if [ -n "$ACTIVACION" ]; then
+            { paplay "$ACTIVACION" || aplay -q "$ACTIVACION"; } >/dev/null 2>&1 ||
+                echo "aviso: no pude reproducir $(basename "$ACTIVACION") (¿servidor de audio?)" >&2
+        fi
+    fi
     echo "Listo: /reload en herdr para ver+oir $JUEGO"
 fi
