@@ -5,7 +5,7 @@
 <h1 align="center">gentle-emote-arcade</h1>
 
 <p align="center">
-  <img alt="Licencia Apache-2.0" src="https://img.shields.io/badge/licencia-Apache--2.0-c0a062?labelColor=0a0a0b">
+  <img alt="Licencia MIT" src="https://img.shields.io/badge/licencia-MIT-c0a062?labelColor=0a0a0b">
   <img alt="Sets" src="https://img.shields.io/badge/sets-5%20completos-c9ccd1?labelColor=0a0a0b">
 </p>
 
@@ -46,7 +46,7 @@ El detalle pieza por pieza:
 | Código del avatar | [`gentle-emote`](https://github.com/efolchmontiel/gentle-emote) (npm `gentle-emote@0.1.4`) | [efolchmontiel](https://github.com/efolchmontiel) | MIT |
 | Linaje de ese paquete | [`pi-emote`](https://github.com/cgxeiji/pi-emote) | Eiji Onchi | MIT |
 | Arte de `gentle` y `gentle-yolo` | sets `gentleman` / `gentleman-yolo` del mismo paquete, sin retocar | Eiji Onchi + efolchmontiel | MIT (copia en [`emotes/gentle/LICENSE`](emotes/gentle/LICENSE)) |
-| Sprites de los juegos | generadores de `scripts/sprites/` | este repo | Apache-2.0 |
+| Sprites de los juegos | generadores de `scripts/sprites/` | este repo | MIT |
 | Sonidos de los juegos | packs de cada juego (ver aviso de licencia) | sus dueños | — |
 
 Si en algún momento querés devolver algo aguas arriba —el menú de dos pasos, el
@@ -206,17 +206,17 @@ mano, y por eso es el más confiable para trabajar.
 
 ## Licencia
 
-Tres capas, tres reglas. El [`LICENSE`](LICENSE) de la raíz es **Apache-2.0** y
-cubre lo que es de este repo:
+**MIT** ([`LICENSE`](LICENSE)): usalo, cambialo, redistribuilo, vendelo, con una
+sola condición — dejá el aviso de copyright. Es la misma licencia que los dos
+proyectos de los que viene este repo.
 
 | Capa | Qué incluye | Licencia |
 |---|---|---|
-| Código, arte propio y docs | `extensions/`, `scripts/`, `emotes/aoe`…`lol`, `docs/` | Apache-2.0 |
-| Avatar de `gentle` / `gentle-yolo` | `emotes/gentle`, `emotes/gentle-yolo` | MIT, de Eiji Onchi y efolchmontiel — el aviso viaja en el `LICENSE` de cada uno |
-| Audio de los juegos | `sounds/` | Sin licencia verificada — uso local |
+| Código, arte propio y docs | `extensions/`, `scripts/`, `emotes/aoe`…`lol`, `docs/` | MIT |
+| Avatar de `gentle` / `gentle-yolo` | `emotes/gentle`, `emotes/gentle-yolo` | MIT, de Eiji Onchi y efolchmontiel — su aviso viaja en el `LICENSE` de cada uno |
+| Audio de los juegos | `sounds/` | Sin licencia verificada — ver el aviso de abajo |
 
-La capa Apache-2.0 se usa, modifica y redistribuye manteniendo el aviso. Para
-contribuir: un PR con el generador que produce el arte (`scripts/sprites/`),
+Para contribuir: un PR con el generador que produce el arte (`scripts/sprites/`),
 sin audios sin permiso y manteniendo 48×40 RGBA.
 
 Los audios y las marcas de los juegos son de sus dueños: procedencia, dueño de
@@ -227,12 +227,11 @@ confirmado: la dirección del repo es distribuir el **generador**
 (`scripts/make_gentle_sounds.py` más el mapeo evento → frase) y no los WAV como
 parte de lo publicado.
 
-Fuera de la licencia, la casa pide no vender ni poner publicidad alrededor del
-repo. Apache-2.0 no lo prohíbe, así que es un pedido de la comunidad, no una
-cláusula.
+No hay pedido comercial: la licencia permite vender sin pedir permiso. Lo que sí
+pide la casa es que si mejorás algo, lo devuelvas.
 
 ---
 
 <p align="center">
-  <sub><strong>motor · Gentle Shell</strong> · Apache-2.0</sub>
+  <sub><strong>motor · Gentle Shell</strong> · MIT</sub>
 </p>

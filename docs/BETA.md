@@ -324,10 +324,10 @@ contenido.
 1. **Repo**: `git init` en `gentle-emote-arcade/`, revisar
    `git status --short` y confirmar que la lista coincide con los 108 archivos
    de acá. El árbol sigue sin `.git`; no se creó ni se pusheó nada.
-2. **Licencia**: resuelto. El repo es Apache-2.0 ([`LICENSE`](../LICENSE)) y la
-   cadena MIT del avatar está en [`NOTICE.md`](../NOTICE.md). El audio de los
-   juegos no tiene licencia verificada y se publica igual, por decisión del dueño:
-   procedencia y alcance en [`AVISO-AUDIO.md`](AVISO-AUDIO.md).
+2. **Licencia**: resuelto. El repo es MIT ([`LICENSE`](../LICENSE)), la misma de
+   los upstreams, con la atribución del avatar en [`NOTICE.md`](../NOTICE.md). El
+   audio de los juegos no tiene licencia verificada y se publica igual, por
+   decisión del dueño: procedencia y alcance en [`AVISO-AUDIO.md`](AVISO-AUDIO.md).
 3. **Remoto**: crear el repo (o el fork de `efolchmontiel/gentle-emote`) y
    apuntar `origin`. Decidir si se publica como fork o como repo independiente
    con el crédito en el README.

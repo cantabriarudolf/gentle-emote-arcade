@@ -1,8 +1,8 @@
 # Aviso de audio
 
-El código y el arte propio de este repo son Apache-2.0, y el avatar de `gentle`
-es MIT (ver [`NOTICE.md`](../NOTICE.md)). **El audio no está bajo ninguna de esas
-licencias**: son sonidos de videojuegos y una voz de terceros.
+El código y el arte propio de este repo son MIT, igual que el avatar de `gentle`
+(ver [`NOTICE.md`](../NOTICE.md)). **El audio no está bajo ninguna licencia**: son
+sonidos de videojuegos y una voz de terceros.
 
 ## Qué hay en cada pack
 
@@ -31,4 +31,4 @@ saca sin discutir.
 - Los MP3 crudos de juego (`datas/`) y las previews (`previews/`) no se publican.
 - Las fuentes crudas de arte (`*.jpg`) tampoco; la entrega es el PNG 48×40.
 - Los sonidos propios generados por este repo no existen todavía: cuando se
-  generen por script, van a Apache-2.0 como el resto de `scripts/`.
+  generen por script, van a MIT como el resto de `scripts/`.

@@ -1,7 +1,7 @@
 # NOTICE
 
-`gentle-emote-arcade` distribuye obra de otros. Este archivo es el aviso que esa
-obra pide, y la razón por la que el repo no es solo Apache-2.0.
+`gentle-emote-arcade` distribuye obra de otros. Este archivo junta esa
+atribución en un solo lugar, para que no haya que buscarla carpeta por carpeta.
 
 ## MIT — avatar y escenas de `gentle` y `gentle-yolo`
 
@@ -17,10 +17,9 @@ Licencia MIT, con su texto completo en `emotes/gentle/LICENSE` y
 `emotes/gentle-yolo/LICENSE`. El linaje de ese paquete es
 [`cgxeiji/pi-emote`](https://github.com/cgxeiji/pi-emote).
 
-## Apache-2.0 — todo lo demás
+## MIT — el resto del repo
 
-Código, arte de los juegos, herramientas y documentación de este repo: ver
-[`LICENSE`](LICENSE).
+Todo lo demás de este repo está bajo la misma licencia, ver [`LICENSE`](LICENSE).
 
 ## Audio de los juegos y de terceros
 

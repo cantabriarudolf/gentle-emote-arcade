@@ -18,8 +18,9 @@ sepa)» (L2). Cumplido en `README.md` (`## Gracias` + pie `motor · Gentle Shell
 
 **S3 — Licencia.** «indicame que tipo de licencia debiera tener este proyecto es
 para la comunidad de gentle y quiero subirlo al hub del sitio» (L1). Decidido:
-Apache-2.0 de raíz ya vigente, más la cadena MIT declarada en un `NOTICE.md` y en
-los `LICENSE` de cada pack de arte.
+**MIT**, la misma licencia que los dos upstreams del avatar. Un solo `LICENSE` y la
+atribución reunida en `NOTICE.md`, más el `LICENSE` de cada pack de arte. Historia:
+primero quedó Apache-2.0, se cambió en L10.
 
 **S4 — Orden antes de publicar.** «previamente necesitamos ordenarlo un poco mas ya
 que posteriormente deberemos hacer el fork formal para que quede marcado ya que
@@ -123,6 +124,9 @@ con lafinalidad de que de la sensacion de boludeo y buena onda. que opinas?»
 **L9** — «si se desinstala tiene que dejar los sonidos que venian por defecto en
 gentle shell, que mas queda pendiente?»
 
+**L10** — «nosotros tendriamos que ser consecuentes, asi que tendria que ser similar
+a ellos»
+
 **E1 — evidencia S1/S2.** `README.md` reescrito: intro de capa auditiva, `## Gracias`
 con los cuatro créditos, tabla de linaje, tabla de licencia por capas. Sin commit.
 
@@ -184,6 +188,18 @@ pool de `agent.started` quedó en 4 frases libres (`a-ver`, `a-ver-2`, `locura`,
 `audio.events`, deja backup fechado y conserva `enabled` y `minimumIntervalMs`.
 Probado con `--dry-run` real; el restore efectivo no se ejecutó para no pisar el
 pack cs16 activo.
+
+**E12 — cambio de licencia (L10).** De Apache-2.0 a MIT. Razón: la licencia tiene
+que ser consecuente con el linaje — los dos upstreams del avatar son MIT — y el
+aparato de Apache (concesión de patentes, `NOTICE`, aviso de modificaciones) no
+aporta nada a un pack de sprites y sonidos, sólo fricción para quien remixa. Se
+reescribieron `LICENSE`, `NOTICE.md`, `README.md` (badge, tabla, sección y pie),
+`docs/BETA.md` y `docs/AVISO-AUDIO.md`. La frase «sin venta ni publicidad» sale:
+MIT permite vender explícitamente, dejarla era contradictorio.
+
+**Nota de casa.** La norma de `order-repo` dice Apache-2.0 siempre. Este repo queda
+como excepción deliberada y documentada: derivado íntegro de obra MIT, sin código
+con valor de patente.
 
 **E8 — decisión S6.** L6 elige la opción (a). T4 deja de mover audio y pasa a
 fijar el aviso. Riesgo aceptado por el dueño con conocimiento del alcance: marcas
