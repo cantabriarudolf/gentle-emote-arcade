@@ -48,6 +48,8 @@ detalle del porqué, evento por evento, está en
 | `starcraft-yolo` | 50 PNG en 24 carpetas | sí (idéntico) | generado (`gen_starcraft.py`) |
 | `lol` | 50 PNG en 24 carpetas | sí (idéntico) | generado (`gen_lol.py`) |
 | `lol-yolo` | 50 PNG en 24 carpetas | sí (idéntico) | generado (`gen_lol.py`) |
+| `gentle` | 76 PNG en 24 carpetas | sí | **del fork upstream**, sin retocar (MIT, ver `emotes/gentle/LICENSE`) |
+| `gentle-yolo` | 76 PNG en 24 carpetas | sí | gemelo YOLO del fork, sin retocar (MIT) |
 
 ## Instalador local
 
