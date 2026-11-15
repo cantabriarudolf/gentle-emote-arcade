@@ -1,12 +1,18 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { existsSync, readFileSync, writeFileSync, readdirSync, appendFileSync, statSync } from "node:fs";
-import { join, dirname } from "node:path";
+import { existsSync, readFileSync, writeFileSync, readdirSync, appendFileSync, statSync, mkdirSync } from "node:fs";
+import { join, dirname, basename } from "node:path";
 import { execFile } from "node:child_process";
 
 const OCULTOS = new Set(["abuela"]);
 const JUEGOS_FALLBACK = ["aoe", "minecraft", "cs16", "starcraft", "lol", "misc"];
-const INVASIVIDADES = ["todo", "esencial", "guardia"];
 const DEFAULT_INVASIVIDAD = "todo";
+
+/** Los tres sets de notificaciones auditivas que ofrece el menu: a, b y c. */
+export const SETS_SONIDO = [
+  { id: "a", nivel: "todo", etiqueta: "a — todo (14 sonidos: todo lo que pasa)" },
+  { id: "b", nivel: "esencial", etiqueta: "b — esencial (12: sin queued/running)" },
+  { id: "c", nivel: "guardia", etiqueta: "c — guardia (6: sólo los que piden tu mano)" },
+];
 
 const HOME_DIR = process.env.HOME ?? process.env.USERPROFILE ?? "";
 
@@ -91,14 +97,26 @@ export function parseArgs(args: string, cwd: string): Opciones {
       continue;
     }
     if (!opciones.juego) opciones.juego = t;
-    else if (!opciones.invasividad && INVASIVIDADES.includes(t)) opciones.invasividad = t;
+    else if (!opciones.invasividad && resolverNivel(t)) opciones.invasividad = t;
     i += 1;
   }
   return opciones;
 }
 
 export function normalizarInvasividad(valor: string): string {
-  return INVASIVIDADES.includes(valor) ? valor : DEFAULT_INVASIVIDAD;
+  return resolverNivel(valor) || DEFAULT_INVASIVIDAD;
+}
+
+/** Acepta el nivel (`todo`/`esencial`/`guardia`), la letra del menu (`a`/`b`/`c`) o un prefijo unico. */
+export function resolverNivel(entrada: string): string {
+  const limpio = String(entrada ?? "").trim().toLowerCase();
+  if (!limpio) return "";
+  const porNombre = SETS_SONIDO.find((s) => s.nivel === limpio);
+  if (porNombre) return porNombre.nivel;
+  const porLetra = /^([abc])\b/.exec(limpio);
+  if (porLetra) return SETS_SONIDO.find((s) => s.id === porLetra[1])?.nivel ?? "";
+  const porPrefijo = SETS_SONIDO.filter((s) => s.nivel.startsWith(limpio));
+  return porPrefijo.length === 1 ? porPrefijo[0].nivel : "";
 }
 
 function findProjectMap(cwd: string, arcade: string | null): string | null {
@@ -111,6 +129,36 @@ function findProjectMap(cwd: string, arcade: string | null): string | null {
     if (c && existsSync(c)) return c;
   }
   return null;
+}
+
+/** Ruta del mapa por proyecto: el archivo que ya existe o el del cwd. */
+export function projectsPath(cwd: string, arcade: string | null): string {
+  return findProjectMap(cwd, arcade) ?? join(cwd, ".pi", "extensions", "game-select", "projects.json");
+}
+
+/** Guarda juego y set elegidos para este proyecto, sin perder las otras entradas. */
+export function guardarProyecto(
+  mapPath: string,
+  proyecto: string,
+  datos: { juego: string; invasividad: string },
+): boolean {
+  try {
+    let mapa: Record<string, unknown> = {};
+    if (existsSync(mapPath)) {
+      try {
+        const leido = JSON.parse(readFileSync(mapPath, "utf-8"));
+        if (leido && typeof leido === "object" && !Array.isArray(leido)) mapa = leido as Record<string, unknown>;
+      } catch {
+        mapa = {};
+      }
+    }
+    mapa[proyecto] = { juego: datos.juego, invasividad: datos.invasividad };
+    mkdirSync(dirname(mapPath), { recursive: true });
+    writeFileSync(mapPath, JSON.stringify(mapa, null, 2) + "\n");
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function readProjectEntry(mapPath: string | null, proyecto: string): { juego?: string; invasividad?: string } {
@@ -155,26 +203,126 @@ function traza(msg: string) {
   }
 }
 
-export function sonarCoin(arcade: string): Promise<void> {
-  const coin = join(arcade, "sounds", "gentle", "coin.wav");
-  if (!existsSync(coin)) return Promise.resolve();
+export interface ResultadoSonido { ok: boolean; player?: string; error?: string }
+
+/** Reproduce un WAV con el primer player disponible y devuelve por qué falló si falló. */
+export function reproducir(archivo: string): Promise<ResultadoSonido> {
+  if (!archivo) return Promise.resolve({ ok: false, error: "ruta vacía" });
+  if (!existsSync(archivo)) return Promise.resolve({ ok: false, error: `no existe: ${archivo}` });
   const players: string[][] =
     process.platform === "darwin"
-      ? [["afplay", coin]]
-      : [["paplay", coin], ["aplay", "-q", coin]];
+      ? [["afplay", archivo]]
+      : [["paplay", archivo], ["aplay", "-q", archivo]];
   return new Promise((resolve) => {
     let done = false;
-    const fin = () => { if (!done) { done = true; resolve(); } };
-    const to = setTimeout(fin, 3000);
+    const errores: string[] = [];
+    const fin = (resultado: ResultadoSonido) => {
+      if (done) return;
+      done = true;
+      traza(`sonido ${resultado.ok ? `ok ${resultado.player}` : `fallo: ${resultado.error}`}`);
+      resolve(resultado);
+    };
+    const to = setTimeout(() => fin({ ok: false, error: "timeout del player" }), 3000);
     const intentar = (i: number): void => {
-      if (i >= players.length) { clearTimeout(to); fin(); return; }
+      if (i >= players.length) {
+        clearTimeout(to);
+        fin({ ok: false, error: errores.join("; ") || "sin player disponible" });
+        return;
+      }
       execFile(players[i][0], players[i].slice(1), (err) => {
-        if (!err) { clearTimeout(to); fin(); }
-        else intentar(i + 1);
+        if (!err) { clearTimeout(to); fin({ ok: true, player: players[i][0] }); }
+        else { errores.push(`${players[i][0]}: ${err.message}`); intentar(i + 1); }
       });
     };
     intentar(0);
   });
+}
+
+/** Seam de reproducción: los tests lo reemplazan para no tocar el audio real. */
+export const reproductor = { play: reproducir };
+
+export function sonarCoin(arcade: string, juego = "gentle"): Promise<ResultadoSonido> {
+  const archivo = resolverActivacion(arcade, juego);
+  if (!archivo) return Promise.resolve({ ok: false, error: "el pack no define sonido de activación" });
+  traza(`activacion -> ${basename(archivo)}`);
+  return reproductor.play(archivo);
+}
+
+/**
+ * Sonido de sesión nueva (`session_start` con `reason: "new"`). Un pack puede
+ * traer su propia frase en `nuevaSesion`; si no la trae, o la trae pero no
+ * resuelve a un archivo, cae al `session.started` del pack. Sin ese fallback
+ * `/new` quedaba mudo en 6 de 7 packs: la ausencia de una clave opcional no
+ * puede traducirse en silencio.
+ */
+export function sonidoNuevaSesion(
+  arcade: string,
+  juego: string,
+  rnd: () => number = Math.random,
+): string | null {
+  let nombres: string[] = [];
+  let arranque = "";
+  try {
+    const sel = JSON.parse(readFileSync(join(arcade, "sounds", juego, "seleccion.json"), "utf-8"));
+    if (Array.isArray(sel?.nuevaSesion)) nombres = sel.nuevaSesion.map(String);
+    const elegido = sel?.choices?.["session.started"];
+    if (typeof elegido === "string") arranque = elegido;
+  } catch {
+    return null;
+  }
+  const resolver = (lista: string[]): string[] =>
+    lista
+      .map((nombre) => resolverArchivo(arcade, juego, nombre))
+      .filter((ruta): ruta is string => ruta != null);
+  let resueltos = resolver(nombres);
+  if (resueltos.length === 0 && arranque) resueltos = resolver([arranque]);
+  if (resueltos.length === 0) return null;
+  const indice = Math.min(resueltos.length - 1, Math.floor(rnd() * resueltos.length));
+  return resueltos[Math.max(0, indice)];
+}
+
+/**
+ * Elige al azar entre el principal del evento y sus `variantes`, en el momento de
+ * reproducir. Es la diferencia con `planSonidos`: aquél sortea una vez y escribe
+ * un `file:` fijo, así que la frase se repite en cada mensaje.
+ */
+export function sonidoRotativo(
+  arcade: string,
+  juego: string,
+  evento: string,
+  rnd: () => number = Math.random,
+): string | null {
+  let nombres: string[] = [];
+  try {
+    const sel = JSON.parse(readFileSync(join(arcade, "sounds", juego, "seleccion.json"), "utf-8"));
+    const principal = sel?.choices?.[evento];
+    if (principal != null) nombres.push(String(principal));
+    const extras = sel?.variantes?.[evento];
+    if (Array.isArray(extras)) for (const extra of extras) nombres.push(String(extra));
+  } catch {
+    return null;
+  }
+  const resueltos = nombres
+    .map((nombre) => resolverArchivo(arcade, juego, nombre))
+    .filter((ruta): ruta is string => ruta != null);
+  if (resueltos.length === 0) return null;
+  const indice = Math.min(resueltos.length - 1, Math.floor(rnd() * resueltos.length));
+  return resueltos[Math.max(0, indice)];
+}
+
+const ORDEN_CONFIRMACION = ["session.started", "agent.attention", "agent.completed", "subagent.completed"];
+
+/**
+ * Sonido que confirma que el pack nuevo quedó aplicado: el `session.started`
+ * del propio pack (el mismo que suena al abrir sesión), y si ese set lo silencia
+ * (guardia), el `agent.attention`, que está en los tres sets.
+ */
+export function sonidoConfirmacion(eventos: Record<string, string | null>): string | null {
+  for (const evento of ORDEN_CONFIRMACION) {
+    const valor = eventos[evento];
+    if (valor && !valor.startsWith("builtin:")) return valor;
+  }
+  return null;
 }
 
 const INV_PERMITIDOS: Record<string, Set<string>> = {
@@ -195,7 +343,7 @@ const INV_PERMITIDOS: Record<string, Set<string>> = {
   ]),
 };
 
-const EVENTOS = [
+export const EVENTOS = [
   "session.started", "agent.started", "agent.completed", "agent.failed",
   "agent.cancelled", "agent.attention", "subagent.queued", "subagent.running",
   "subagent.waiting", "subagent.completed", "subagent.failed", "subagent.cancelled",
@@ -242,29 +390,69 @@ export function planSonidos(
   arcade: string,
   juego: string,
   invasividad: string,
+  rnd: () => number = Math.random,
 ): { eventos: Record<string, string | null>; asignados: number } {
   const selPath = join(arcade, "sounds", juego, "seleccion.json");
   const permitidos = INV_PERMITIDOS[invasividad] ?? INV_PERMITIDOS.todo;
   const eventos: Record<string, string | null> = {};
   let asignados = 0;
   let choices: Record<string, unknown> = {};
+  let variantes: Record<string, unknown> = {};
   try {
     const sel = JSON.parse(readFileSync(selPath, "utf-8"));
     choices = sel?.choices ?? {};
+    variantes = sel?.variantes ?? {};
   } catch {
     /* sin seleccion.json: todo queda en null */
   }
   for (const evento of EVENTOS) {
-    const nombre = choices[evento];
-    const resuelto = nombre == null ? null : resolverArchivo(arcade, juego, String(nombre));
-    if (!permitidos.has(evento) || resuelto == null) {
+    if (!permitidos.has(evento)) {
       eventos[evento] = null;
       continue;
     }
-    eventos[evento] = resuelto;
+    // Candidatos: el principal del evento y las variantes del pack (si las hay).
+    const nombres: string[] = [];
+    if (choices[evento] != null) nombres.push(String(choices[evento]));
+    const extras = variantes[evento];
+    if (Array.isArray(extras)) for (const extra of extras) nombres.push(String(extra));
+    const resueltos = nombres
+      .map((nombre) => resolverArchivo(arcade, juego, nombre))
+      .filter((ruta): ruta is string => ruta != null);
+    if (resueltos.length === 0) {
+      eventos[evento] = null;
+      continue;
+    }
+    const indice = Math.min(resueltos.length - 1, Math.floor(rnd() * resueltos.length));
+    eventos[evento] = resueltos[Math.max(0, indice)];
     asignados += 1;
   }
   return { eventos, asignados };
+}
+
+/**
+ * Sonido de activación del pack (`activacionVariantes`, con `activation` y el
+ * coin como fallbacks): es lo que suena al activar el easter egg `gentle`.
+ */
+export function resolverActivacion(
+  arcade: string,
+  juego: string,
+  rnd: () => number = Math.random,
+): string | null {
+  let nombres: string[] = [];
+  try {
+    const sel = JSON.parse(readFileSync(join(arcade, "sounds", juego, "seleccion.json"), "utf-8"));
+    if (Array.isArray(sel?.activacionVariantes)) nombres = sel.activacionVariantes.map(String);
+    else if (typeof sel?.activation === "string") nombres = [sel.activation];
+  } catch {
+    /* sin pack: queda el coin */
+  }
+  if (nombres.length === 0) nombres = ["coin"];
+  const resueltos = nombres
+    .map((nombre) => resolverArchivo(arcade, juego, nombre))
+    .filter((ruta): ruta is string => ruta != null);
+  if (resueltos.length === 0) return null;
+  const indice = Math.min(resueltos.length - 1, Math.floor(rnd() * resueltos.length));
+  return resueltos[Math.max(0, indice)];
 }
 
 export default function (pi: ExtensionAPI) {
@@ -273,10 +461,59 @@ export default function (pi: ExtensionAPI) {
   const agentDir =
     process.env.PI_CODING_AGENT_DIR || join(home, ".gentle-shell", "agent");
   const cwd = process.cwd();
+  const configs = [
+    join(agentDir, "extensions", "gentle-emote", "config.json"),
+    join(cwd, ".pi", "extensions", "gentle-emote", "config.json"),
+  ];
+
+  /** Pack activo: el `emote-set` del config de proyecto, si no el global. */
+  const packActual = (): string => {
+    for (const ruta of [configs[1], configs[0]]) {
+      try {
+        const set = JSON.parse(readFileSync(ruta, "utf-8"))?.emotes?.[0]?.["emote-set"];
+        if (typeof set === "string" && set) return set;
+      } catch {
+        /* siguiente config */
+      }
+    }
+    return "";
+  };
+
+  // "✓ New session started": frase icónica del pack, sólo en sesión nueva.
+  pi.on?.("session_start", async (event: any) => {
+    const reason = event?.reason;
+    if (reason !== "new") return;
+    const arcade = findArcade(cwd);
+    if (!arcade) return;
+    const pack = packActual();
+    const archivo = pack ? sonidoNuevaSesion(arcade, pack) : null;
+    traza(`nueva sesion -> ${archivo ? basename(archivo) : "-"} (pack ${pack || "?"})`);
+    if (archivo) await reproductor.play(archivo);
+  });
+
+  // El Enter con el pack `gentle`: frase distinta en cada mensaje. El resto de
+  // los packs queda con el `agent.started` fijo que escribe `planSonidos`.
+  let rotando = false;
+  pi.on?.("turn_start", async () => {
+    if (rotando) return;
+    const arcade = findArcade(cwd);
+    if (!arcade) return;
+    const pack = packActual();
+    if (pack !== "gentle") return;
+    const archivo = sonidoRotativo(arcade, pack, "agent.started");
+    traza(`turno gentle -> ${archivo ? basename(archivo) : "-"}`);
+    if (!archivo) return;
+    rotando = true;
+    try {
+      await reproductor.play(archivo);
+    } finally {
+      rotando = false;
+    }
+  });
 
   const comando = {
     description:
-      "Elegir juego (sprites + sonidos): /emote:juego abre el menu, o /emote:juego <juego|n> directo",
+      "Elegir juego (sprites + sonidos): /emote:juego abre el menu; directo /emote:juego <juego|n> con --invasividad a|b|c",
     getArgumentCompletions: (prefix: string) => {
       traza(`completions prefix=${JSON.stringify(prefix)}`);
       return listarJuegos(findArcade(cwd))
@@ -287,44 +524,76 @@ export default function (pi: ExtensionAPI) {
       traza(`handler args=${JSON.stringify(args)}`);
       const arcade = findArcade(cwd);
       const opciones = parseArgs(args, cwd);
-      const mapPath = findProjectMap(cwd, arcade);
+      const mapPath = projectsPath(cwd, arcade);
       const entry = readProjectEntry(mapPath, opciones.proyecto);
       const juegos = listarJuegos(arcade);
+      const hayUi = typeof ctx?.ui?.select === "function";
+      const sinArgs = !opciones.juego && !opciones.invasividad;
+      const menuCompleto = sinArgs && hayUi && !opciones.dryRun;
+      const tituloJuego = arcade
+        ? "Elegí juego (sprites + sonidos):"
+        : "Elegí juego (arcade no encontrado, no se aplican sonidos):";
+      const listaNumerada = () => {
+        const lista = juegos.map((j, i) => `${i + 1}=${j}`).join("  ");
+        ctx.ui?.notify?.(
+          `[juego] elegí número: /emote:juego <n> — ${lista} ` +
+            `(set: --invasividad a|b|c) (arcade: ${arcade ?? "no encontrado"})`,
+          "info",
+        );
+      };
+      const cancelar = () => ctx.ui?.notify?.("[juego] cancelado: sin cambios", "info");
+      const preguntarSet = async (): Promise<string> => {
+        const elegido = await ctx.ui.select(
+          "Elegí set de notificaciones auditivas:",
+          SETS_SONIDO.map((s) => s.etiqueta),
+        );
+        const nivel = resolverNivel(String(elegido ?? ""));
+        traza(`menu sonido -> ${String(elegido ?? "cancelado")} (${nivel || "-"})`);
+        return nivel;
+      };
 
-      let juego = resolverJuego(opciones.juego, juegos);
-      if (!juego && entry.juego) juego = resolverJuego(String(entry.juego), juegos);
+      let juego = "";
+      let invasividad = "";
 
-      let invasividad = normalizarInvasividad(
-        opciones.invasividad || (entry.invasividad ? String(entry.invasividad) : ""),
-      );
-
-      // Sin argumento: menu real; sin UI de seleccion, la lista numerada de siempre.
-      if (!juego) {
-        if (typeof ctx?.ui?.select === "function") {
-          const titulo = arcade
-            ? "Elegí juego (sprites + sonidos):"
-            : "Elegí juego (arcade no encontrado, no se aplican sonidos):";
-          const elegido = await ctx.ui.select(titulo, juegos);
-          juego = resolverJuego(String(elegido ?? ""), juegos);
-        }
+      if (menuCompleto) {
+        // El menu pregunta siempre las dos cosas: juego y set a/b/c.
+        juego = resolverJuego(String((await ctx.ui.select(tituloJuego, juegos)) ?? ""), juegos);
+        traza(`menu juego -> ${juego || "cancelado"}`);
         if (!juego) {
-          const lista = juegos.map((j, i) => `${i + 1}=${j}`).join("  ");
-          ctx.ui?.notify?.(
-            `[juego] elegí número: /emote:juego <n> — ${lista} (arcade: ${arcade ?? "no encontrado"})`,
-            "info",
-          );
+          listaNumerada();
           return;
         }
+        invasividad = await preguntarSet();
+        if (!invasividad) {
+          cancelar();
+          return;
+        }
+      } else {
+        juego = resolverJuego(opciones.juego, juegos);
+        if (!juego && entry.juego) juego = resolverJuego(String(entry.juego), juegos);
+        if (!juego) {
+          listaNumerada();
+          return;
+        }
+        invasividad = resolverNivel(opciones.invasividad);
+        // El set se confirma siempre en vivo, aunque el juego venga por argumento
+        // o haya uno guardado: el guardado es sólo el default sin UI (dry-run/script).
+        if (!invasividad && hayUi && !opciones.dryRun) {
+          invasividad = await preguntarSet();
+          if (!invasividad) {
+            cancelar();
+            return;
+          }
+        }
+        invasividad = invasividad || resolverNivel(entry.invasividad ? String(entry.invasividad) : "") || DEFAULT_INVASIVIDAD;
       }
 
-      // Sprites: gentle/misc usan arte de aoe.
-      const spritesJuego = juego === "gentle" || juego === "misc" ? "aoe" : juego;
-      const configs = [
-        join(agentDir, "extensions", "gentle-emote", "config.json"),
-        join(cwd, ".pi", "extensions", "gentle-emote", "config.json"),
-      ];
+      // Sprites: `gentle` trae sus propias escenas (fork upstream); `misc` es
+      // sólo sonidos mezclados, así que hereda el arte de aoe.
+      const spritesJuego = juego === "misc" ? "aoe" : juego;
       if (!opciones.dryRun) {
         for (const p of configs) setEmoteSet(p, spritesJuego);
+        guardarProyecto(mapPath, opciones.proyecto, { juego, invasividad });
       }
 
       if (!arcade) {
@@ -359,16 +628,43 @@ export default function (pi: ExtensionAPI) {
             ev[evento] = val == null ? null : val.startsWith("builtin:") ? val : `file:${val}`;
           }
           ev["session.shutdown"] = null;
+          // `gentle` rota la frase del Enter por ocurrencia: la reproduce la
+          // extensión en `turn_start`, así que el scheduler no debe duplicarla.
+          if (juego === "gentle") ev["agent.started"] = null;
           writeFileSync(livePath, JSON.stringify(live, null, 2));
         } catch {
           /* sin pack de sonidos: quedan solo los sprites */
         }
       }
-      if (juego === "gentle") await sonarCoin(arcade);
+      let sonido: ResultadoSonido = { ok: true };
+      if (juego === "gentle") {
+        sonido = await sonarCoin(arcade);
+      } else {
+        // Confirmación audible: el session.started del pack recién aplicado.
+        const confirmacion = sonidoConfirmacion(eventos);
+        if (confirmacion) sonido = await reproductor.play(confirmacion);
+      }
+      if (!sonido.ok) {
+        ctx.ui?.notify?.(
+          `[juego] el pack quedó aplicado, pero no pude reproducir el sonido: ${sonido.error ?? "sin player"}`,
+          "warning",
+        );
+      }
+      const recargar = typeof ctx?.reload === "function";
       ctx.ui?.notify?.(
-        `[juego] → ${juego} (sprites + ${asignados} sonidos, ${invasividad}). /reload para ver+oir.`,
+        `[juego] → ${juego} (sprites + ${asignados} sonidos, ${invasividad}). ` +
+          (recargar ? "Recargado." : "/reload para ver+oir."),
         "info",
       );
+      // El reload es terminal para este handler: recarga extensiones y config.
+      if (recargar) {
+        try {
+          await ctx.reload();
+        } catch {
+          /* si el host no puede recargar, queda el aviso de /reload */
+        }
+        return;
+      }
     },
   };
   pi.registerCommand?.("emote:juego", comando);
