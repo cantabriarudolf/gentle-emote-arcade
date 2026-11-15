@@ -1,0 +1,81 @@
+# ASCII fallback for herdr and other terminals without image support.
+# AoE characters in text.
+
+hi:
+  default: "o/ \\o/"
+
+idle:
+  default: "(o_o)"
+  blink:   "(-_-)"
+
+think:
+  default: "(o_? )"
+
+talk:
+  close:       "(o _ o)"
+  open_small:  "(o . o)"
+  open_medium: "(o o o)"
+  open_wide:   "(O O O)"
+
+read:
+  - "(o)~"
+  - "(o)~"
+
+write:
+  - "(o)/"
+  - "(o)\\"
+
+tool:
+  - "(o)>"
+  - "(o)<"
+
+ask:
+  default: "(o?)"
+
+success:
+  default: "(^_^)v"
+
+failure:
+  default: "(x_x)"
+
+compact:
+  default: "(o_o;)"
+
+delegate:
+  default: "(o o o)"
+
+explore:
+  default: "(o)>"
+
+build:
+  default: "(o)#"
+
+verify:
+  default: "(o)!"
+
+judge:
+  default: "(o)!"
+
+review:
+  default: "(o)~"
+
+jira:
+  default: "(o)^"
+
+jobs:
+  default: "(o)~"
+
+yolo:
+  default: "(o)Y"
+
+super-yolo:
+  default: "(o)*"
+
+remember:
+  default: "(o)~"
+
+grandma:
+  default: "(o)~"
+
+bye:
+  default: "(o)/"
