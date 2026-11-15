@@ -94,6 +94,22 @@ Los tests de la extensión corren con el Node que trae Gentle Shell:
 `node --test tests/game-select.test.ts` (trabajan en un sandbox temporal, no
 tocan la config real).
 
+## Logs acotados
+
+El paquete upstream escribe `debug.log` en cada frame del avatar y no rota
+nunca: con `debug: true` llegó a 558 MB en `~/.gentle-shell/agent/npm/node_modules/gentle-emote/`.
+Este repo lo mantiene acotado por cuatro lados:
+
+- `debug: false` en los `config.json` (también es el default del paquete): no
+escribe nada mientras esté apagado.
+- `scripts/patch_debug_log.sh` le pone un cap de 2 MB con rotación a
+`debug.log.1`, así ni con `debug` prendido puede llenar el disco. Es idempotente
+y valida el sha256 del archivo original antes de tocarlo. **`pi update`
+reinstala el paquete y lo borra: volvé a correrlo.**
+- la traza `/tmp/game-select.log` se trunca sola a 64 KB.
+- `scripts/check_install.sh` avisa si falta el cap, si el log creció o si queda
+algún archivo ajeno (de root) en `.pi/`.
+
 ## Licencia
 
 Apache-2.0 vigente ([`LICENSE`](LICENSE)): código, sprites, galería y mapas se pueden

@@ -86,12 +86,31 @@ else
 fi
 
 echo "== higiene =="
+LOG_TS="$AGENT_DIR/npm/node_modules/gentle-emote/src/log.ts"
+if [ -f "$LOG_TS" ] && ! grep -q "MAX_LOG_BYTES" "$LOG_TS" 2>/dev/null; then
+    drift "falta el cap de debug.log: corré scripts/patch_debug_log.sh (pi update lo borra)"
+else
+    ok "cap de debug.log presente (rota a 2 MB)"
+fi
 if [ -f "$NPM_LOG" ]; then
     BYTES=$(stat -c%s "$NPM_LOG" 2>/dev/null || echo 0)
-    if [ "$BYTES" -gt 10485760 ]; then
-        drift "debug.log de $(($BYTES / 1048576)) MB en el paquete npm: poné debug=false y borralo"
+    if [ "$BYTES" -gt 4194304 ]; then
+        drift "debug.log de $(($BYTES / 1048576)) MB en el paquete npm"
     else
-        ok "debug.log chico ($BYTES bytes)"
+        ok "debug.log en $BYTES bytes"
+    fi
+fi
+if [ -f "$NPM_LOG.1" ]; then
+    ROTADO=$(stat -c%s "$NPM_LOG.1" 2>/dev/null || echo 0)
+    ok "debug.log.1 (rotación) en $((ROTADO / 1024)) KB"
+fi
+TRACE=/tmp/game-select.log
+if [ -f "$TRACE" ]; then
+    TRACE_BYTES=$(stat -c%s "$TRACE" 2>/dev/null || echo 0)
+    if [ "$TRACE_BYTES" -gt 200000 ]; then
+        drift "traza de game-select en $((TRACE_BYTES / 1024)) KB: revisá el cap en traza()"
+    else
+        ok "traza game-select chica ($TRACE_BYTES bytes)"
     fi
 fi
 for CFG in \

@@ -1,5 +1,5 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { existsSync, readFileSync, writeFileSync, readdirSync, appendFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync, readdirSync, appendFileSync, statSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { execFile } from "node:child_process";
 
@@ -125,9 +125,31 @@ function readProjectEntry(mapPath: string | null, proyecto: string): { juego?: s
   return {};
 }
 
+const TRAZA_PATH = "/tmp/game-select.log";
+const TRAZA_MAX_BYTES = 64 * 1024;
+/** Se arranca desde el tamaño en disco y trunca al pasar el tope: nunca crece sin límite. */
+let trazaBytes = (() => {
+  try {
+    const size = statSync(TRAZA_PATH).size;
+    if (size > TRAZA_MAX_BYTES) {
+      writeFileSync(TRAZA_PATH, "");
+      return 0;
+    }
+    return size;
+  } catch {
+    return 0;
+  }
+})();
+
 function traza(msg: string) {
   try {
-    appendFileSync("/tmp/game-select.log", `${new Date().toISOString()} ${msg}\n`);
+    const line = `${new Date().toISOString()} ${msg}\n`;
+    if (trazaBytes + line.length > TRAZA_MAX_BYTES) {
+      writeFileSync(TRAZA_PATH, "");
+      trazaBytes = 0;
+    }
+    appendFileSync(TRAZA_PATH, line);
+    trazaBytes += line.length;
   } catch {
     /* sin fs: no hay traza */
   }
