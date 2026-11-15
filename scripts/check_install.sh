@@ -73,15 +73,18 @@ echo "== sonidos =="
 if [ ! -f "$LIVE" ]; then
     drift "no existe $LIVE"
 else
-    EVENTOS=$(grep -c '"file:' "$LIVE" 2>/dev/null || echo 0)
-    if [ "$EVENTOS" = "0" ]; then
-        drift "ningún evento con sonido de pack (solo builtin): corré scripts/select_game.sh <juego>"
+    SONIDOS=$(grep -cE '"(file:|builtin:)' "$LIVE" 2>/dev/null || true)
+    EVENTOS=$(grep -c '"file:' "$LIVE" 2>/dev/null || true)
+    if [ "$SONIDOS" = "0" ]; then
+        drift "ningún evento con sonido (ni archivo ni builtin): corré scripts/select_game.sh <juego>"
+    elif [ "$EVENTOS" = "0" ]; then
+        ok "$SONIDOS eventos con sonido (todos builtin: este pack no usa archivos)"
     else
         ROTAS=0
         while IFS= read -r RUTA; do
             [ -f "$RUTA" ] || { drift "evento apunta a un archivo que no existe: $RUTA"; ROTAS=$((ROTAS + 1)); }
         done < <(grep -o '"file:[^"]*"' "$LIVE" | tr -d '"' | sed 's/^file://')
-        [ "$ROTAS" = "0" ] && ok "$EVENTOS eventos cableados, todos los archivos existen"
+        [ "$ROTAS" = "0" ] && ok "$SONIDOS eventos con sonido ($EVENTOS de archivo), todos los archivos existen"
     fi
 fi
 
