@@ -191,6 +191,19 @@ reinstala el paquete y lo borra: volvé a correrlo.**
 - `scripts/check_install.sh` avisa si falta el cap, si el log creció o si queda
 algún archivo ajeno (de root) en `.pi/`.
 
+## Cómo reparte el canal
+
+Gentle Shell no acumula sonidos: tiene **un solo slot pendiente**. Cada evento
+trae prioridad fija (`failed` y `timed_out` = 3; `attention` y `context.high` = 2;
+los `completed` = 1; el resto = 0), sólo suena lo que puede empezar dentro de los
+**2 segundos** siguientes a cuando ocurrió, y entre un sonido y el próximo pasan
+al menos **1000 ms**. Si dos eventos caen juntos, sobrevive el de mayor prioridad
+y el otro se descarta sin avisar.
+
+Consecuencia práctica: el set `a` no significa «suena todo», significa «todo
+compite por el canal». Con `guardia` (set `c`) suenan sólo los seis que piden tu
+mano, y por eso es el más confiable para trabajar.
+
 ## Licencia
 
 Tres capas, tres reglas. El [`LICENSE`](LICENSE) de la raíz es **Apache-2.0** y
@@ -206,8 +219,9 @@ La capa Apache-2.0 se usa, modifica y redistribuye manteniendo el aviso. Para
 contribuir: un PR con el generador que produce el arte (`scripts/sprites/`),
 sin audios sin permiso y manteniendo 48×40 RGBA.
 
-Los audios y las marcas de los juegos son de sus dueños (detalle en
-[`docs/BETA.md`](docs/BETA.md)). Los packs de `starcraft` y `lol` no tienen
+Los audios y las marcas de los juegos son de sus dueños: procedencia, dueño de
+cada marca y alcance de la zona gris en [`docs/AVISO-AUDIO.md`](docs/AVISO-AUDIO.md).
+Los packs de `starcraft` y `lol` no tienen
 licencia verificada, y el de `gentle` usa la voz del streamer sin permiso
 confirmado: la dirección del repo es distribuir el **generador**
 (`scripts/make_gentle_sounds.py` más el mapeo evento → frase) y no los WAV como

@@ -2,6 +2,10 @@
 
 Si dudás de la forma de un personaje, mirá acá y descargá el sample. No inventes.
 
+**Aviso de procedencia**: `refs/ref-villager-moddb.png` es una captura de terceros
+(moddb), versionada sólo como referencia de forma. No es arte de este repo, no está
+bajo su licencia y no se distribuye como entrega.
+
 1. Aldeano (forma oficial, macho/hembra DE y HD)
    https://ageofempires.fandom.com/wiki/Villager_(Age_of_Empires_II)
    Qué bajar: sprite macho DE + hembra DE.
