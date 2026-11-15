@@ -2,20 +2,68 @@
   "schema": "gentle-emote-arcade.sounds/v1",
   "soundsDir": "sounds/gentle",
   "choices": {
-    "session.started": null,
-    "agent.started": null,
-    "agent.completed": "builtin:success",
-    "agent.failed": "builtin:error",
-    "agent.cancelled": null,
-    "agent.attention": "builtin:attention",
-    "subagent.queued": null,
-    "subagent.running": null,
-    "subagent.waiting": null,
-    "subagent.completed": "builtin:success",
-    "subagent.failed": "builtin:error",
-    "subagent.cancelled": null,
-    "subagent.timed_out": "builtin:error",
-    "context.high": "builtin:attention",
-    "activation": "coin"
-  }
+    "session.started": "gentle-shell",
+    "agent.started": "a-ver",
+    "agent.completed": "espectacular",
+    "agent.failed": "no",
+    "agent.cancelled": "asi-no-mas",
+    "agent.attention": "que-les-parece",
+    "subagent.queued": "a-ver-2",
+    "subagent.running": "locura",
+    "subagent.waiting": "bien",
+    "subagent.completed": "ahi-esta",
+    "subagent.failed": "la-verdad-eh",
+    "subagent.cancelled": "asi-no-mas-2",
+    "subagent.timed_out": "no-2",
+    "context.high": "locura-2"
+  },
+  "variantes": {
+    "session.started": [
+      "gentle-shell-2"
+    ],
+    "agent.started": [
+      "a-ver-2",
+      "locura",
+      "que-les-parece"
+    ],
+    "agent.completed": [
+      "espectacular-2"
+    ],
+    "agent.failed": [
+      "no-2"
+    ],
+    "agent.cancelled": [
+      "asi-no-mas-2"
+    ],
+    "subagent.queued": [
+      "a-ver-2-2"
+    ],
+    "subagent.running": [
+      "locura-2"
+    ],
+    "subagent.waiting": [
+      "bien-2"
+    ],
+    "subagent.completed": [
+      "ahi-esta-2"
+    ],
+    "subagent.failed": [
+      "la-verdad-eh-2"
+    ],
+    "subagent.cancelled": [
+      "asi-no-mas-2-2"
+    ],
+    "subagent.timed_out": [
+      "no-2-2"
+    ],
+    "context.high": [
+      "locura-2-2"
+    ]
+  },
+  "activacionVariantes": [
+    "abuela-1"
+  ],
+  "nuevaSesion": [
+    "esto-es-una-locura"
+  ]
 }

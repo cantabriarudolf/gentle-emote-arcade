@@ -11,7 +11,7 @@
     "subagent.queued": "farmexhausted",
     "subagent.running": "wololo",
     "subagent.waiting": "interface-population-limit",
-    "subagent.completed": "aldeanospawn",
+    "subagent.completed": "farmexhausted",
     "subagent.failed": "generic-male-death3",
     "subagent.cancelled": "generic-female-death3",
     "subagent.timed_out": "generic-siege-weapon-death",

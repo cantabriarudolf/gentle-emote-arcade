@@ -11,9 +11,9 @@
     "subagent.queued": "roger",
     "subagent.running": "reloading",
     "subagent.waiting": "c4beep",
-    "subagent.completed": "ctwin",
+    "subagent.completed": "roger",
     "subagent.failed": "negative",
-    "subagent.cancelled": "fallback",
+    "subagent.cancelled": "negative",
     "subagent.timed_out": "getout",
     "context.high": "bombdef"
   }

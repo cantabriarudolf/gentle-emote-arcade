@@ -8,12 +8,12 @@
     "agent.failed": "anvil",
     "agent.cancelled": "villager-ambient",
     "agent.attention": "bell",
-    "subagent.queued": "villager-yes",
+    "subagent.queued": "piston",
     "subagent.running": "teleport",
     "subagent.waiting": "cave",
     "subagent.completed": "xp-orb",
     "subagent.failed": "death",
-    "subagent.cancelled": "villager-ambient",
+    "subagent.cancelled": "creeper",
     "subagent.timed_out": "creeper",
     "context.high": "advancement"
   }
