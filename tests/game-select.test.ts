@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, readdirSync, cpSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, readdirSync, cpSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -145,6 +145,7 @@ test("sin argumentos abre el menu y aplica el juego elegido", async () => {
   const sb = crearSandbox(["aoe", "minecraft"]);
   const { comando } = await cargarExtension(join(sb.cwd, ".gentle-shell", "agent"));
   const { ctx, avisos, titulos, recargas } = ctxFalso("minecraft", "a");
+  const antesLive = readFileSync(sb.live, "utf-8");
 
   await comando.handler("", ctx);
 
@@ -154,19 +155,12 @@ test("sin argumentos abre el menu y aplica el juego elegido", async () => {
   assert.match(titulos[0], /Elegí juego/);
   const agent = JSON.parse(readFileSync(sb.agentConfig, "utf-8"));
   const project = JSON.parse(readFileSync(sb.projectConfig, "utf-8"));
-  assert.equal(agent.emotes[0]["emote-set"], "minecraft");
-  assert.equal(project.emotes[0]["emote-set"], "minecraft");
+  assert.equal(agent.emotes[0]["emote-set"], "gentleman", "el sprite global no se toca");
+  assert.equal(project.emotes[0]["emote-set"], "minecraft", "el sprite es del proyecto");
   assert.equal(agent.debug, true, "no debe perder el resto de la config");
 
-  const live = JSON.parse(readFileSync(sb.live, "utf-8"));
-  assert.match(live.audio.events["agent.failed"], /minecraft\/agent-failed\.wav$/);
-  assert.match(live.audio.events["context.high"], /minecraft\/context-high\.wav$/);
-  assert.match(live.audio.events["subagent.queued"], /minecraft\/subagent-queued\.wav$/);
-  assert.equal(live.audio.events["session.shutdown"], null, "shutdown nunca suena");
+  assert.equal(readFileSync(sb.live, "utf-8"), antesLive, "el audio global no se toca: el hook lo aplica al abrir sesion");
   assert.match(avisos.at(-1)?.mensaje ?? "", /Recargado/, "debe recargar solo, sin /reload manual");
-  const backups = readdirSync(join(sb.cwd, ".gentle-shell", "config", "gentle-ai"))
-    .filter((f) => f.startsWith("notifications.json.bak-"));
-  assert.equal(backups.length, 1, "debe dejar backup antes de escribir");
 });
 
 test("el menu cancelado no escribe nada y cae en la lista numerada", async () => {
@@ -197,10 +191,8 @@ test("el menu pregunta el juego y despues el set de sonidos a/b/c", async () => 
   assert.match(menus[1][1], /^b\b/);
   assert.match(menus[1][2], /^c\b/);
 
-  const live = JSON.parse(readFileSync(sb.live, "utf-8"));
-  assert.match(live.audio.events["agent.attention"], /minecraft\/agent-attention\.wav$/);
-  assert.equal(live.audio.events["agent.started"], null, "guardia no incluye agent.started");
-  assert.equal(live.audio.events["subagent.queued"], null, "guardia no incluye subagent.queued");
+  const mapa = JSON.parse(readFileSync(join(sb.cwd, ".pi", "extensions", "game-select", "projects.json"), "utf-8"));
+  assert.deepEqual(mapa[sb.cwd], { juego: "minecraft", invasividad: "guardia" }, "el set queda en el mapa del proyecto");
   assert.match(avisos.at(-1)?.mensaje ?? "", /guardia/);
   assert.match(avisos.at(-1)?.mensaje ?? "", /6 sonidos/);
 });
@@ -237,18 +229,19 @@ test("el menu guarda juego y set por proyecto y los reusa la proxima vez", async
 });
 
 test("cambiar de juego por argumento vuelve a preguntar el set", async () => {
-  const sb = crearSandbox(["aoe", "minecraft"]);
+  const sb = crearSandbox(["aoe", "minecraft", "lol"]);
   const { comando } = await cargarExtension(join(sb.cwd, ".gentle-shell", "agent"));
 
   await comando.handler("", ctxFalso("minecraft", "a").ctx);
-  assert.equal(JSON.parse(readFileSync(sb.live, "utf-8")).audio.events["subagent.queued"] !== null, true);
+  const mapaPath = join(sb.cwd, ".pi", "extensions", "game-select", "projects.json");
+  assert.equal(JSON.parse(readFileSync(mapaPath, "utf-8"))[sb.cwd].invasividad, "todo");
 
   const segunda = ctxFalso("c");
   await comando.handler("lol", segunda.ctx);
 
   assert.equal(segunda.titulos.length, 1, "con el juego por argumento igual pregunta el set");
   assert.match(segunda.titulos[0], /auditivas/i);
-  assert.equal(JSON.parse(readFileSync(sb.live, "utf-8")).audio.events["subagent.queued"], null);
+  assert.deepEqual(JSON.parse(readFileSync(mapaPath, "utf-8"))[sb.cwd], { juego: "lol", invasividad: "guardia" });
   assert.match(segunda.avisos.at(-1)?.mensaje ?? "", /6 sonidos, guardia/);
 });
 
@@ -286,9 +279,8 @@ test("el set se puede elegir por argumento con a, b o c", async () => {
   await comando.handler("aoe --invasividad c", ctx);
 
   assert.equal(titulos.length, 0, "con el set en el argumento no hay menu");
-  const live = JSON.parse(readFileSync(sb.live, "utf-8"));
-  assert.match(live.audio.events["agent.failed"], /aoe\/agent-failed\.wav$/);
-  assert.equal(live.audio.events["session.started"], null, "guardia no incluye session.started");
+  const mapaPath = join(sb.cwd, ".pi", "extensions", "game-select", "projects.json");
+  assert.deepEqual(JSON.parse(readFileSync(mapaPath, "utf-8"))[sb.cwd], { juego: "aoe", invasividad: "guardia" });
   assert.match(avisos.at(-1)?.mensaje ?? "", /6 sonidos, guardia/);
 });
 
@@ -311,7 +303,7 @@ test("gentle usa sus propias escenas y misc sigue con el arte de aoe", async () 
   const { ctx } = ctxFalso(undefined);
 
   await comando.handler("gentle --invasividad a", ctx);
-  assert.equal(JSON.parse(readFileSync(sb.agentConfig, "utf-8")).emotes[0]["emote-set"], "gentle");
+  assert.equal(JSON.parse(readFileSync(sb.projectConfig, "utf-8")).emotes[0]["emote-set"], "gentle");
 
   await comando.handler("misc --invasividad a", ctx);
   assert.equal(
@@ -487,7 +479,7 @@ test("si el sonido de confirmacion falla, el comando lo avisa", async () => {
   const aviso = avisos.find((a) => /sin servidor de audio/.test(a.mensaje));
   assert.ok(aviso, "debe avisar por qué no sonó");
   assert.equal(aviso?.tipo, "warning");
-  assert.equal(JSON.parse(readFileSync(sb.agentConfig, "utf-8")).emotes[0]["emote-set"], "aoe",
+  assert.equal(JSON.parse(readFileSync(sb.projectConfig, "utf-8")).emotes[0]["emote-set"], "aoe",
     "igual aplica el cambio aunque el sonido falle");
 });
 
@@ -569,10 +561,9 @@ test("el argumento directo sigue funcionando (aoe, invasividad guardia)", async 
 
   await comando.handler("aoe --invasividad guardia", ctx);
 
-  assert.equal(JSON.parse(readFileSync(sb.agentConfig, "utf-8")).emotes[0]["emote-set"], "aoe");
-  const live = JSON.parse(readFileSync(sb.live, "utf-8"));
-  assert.match(live.audio.events["agent.failed"], /aoe\/agent-failed\.wav$/);
-  assert.equal(live.audio.events["agent.started"], null, "guardia no incluye agent.started");
+  assert.equal(JSON.parse(readFileSync(sb.projectConfig, "utf-8")).emotes[0]["emote-set"], "aoe");
+  const mapaPath = join(sb.cwd, ".pi", "extensions", "game-select", "projects.json");
+  assert.deepEqual(JSON.parse(readFileSync(mapaPath, "utf-8"))[sb.cwd], { juego: "aoe", invasividad: "guardia" });
   assert.match(avisos.at(-1)?.mensaje ?? "", /6 sonidos, guardia/);
 });
 
@@ -582,13 +573,14 @@ test("integracion: el menu aplica un pack real del repo con el set c", async () 
   const sb = crearSandbox([]);
   const repo = join(import.meta.dirname, "..");
   cpSync(join(repo, "sounds", "aoe"), join(sb.arcade, "sounds", "aoe"), { recursive: true });
-  const { comando } = await cargarExtension(join(sb.cwd, ".gentle-shell", "agent"));
+  const { comando, manejadores } = await cargarExtension(join(sb.cwd, ".gentle-shell", "agent"));
   const { ctx, avisos, menus } = ctxFalso("aoe", "c");
 
   await comando.handler("", ctx);
 
   assert.deepEqual(menus[0], ["aoe"], "solo el pack que existe en el sandbox");
-  assert.equal(JSON.parse(readFileSync(sb.agentConfig, "utf-8")).emotes[0]["emote-set"], "aoe");
+  assert.equal(JSON.parse(readFileSync(sb.projectConfig, "utf-8")).emotes[0]["emote-set"], "aoe");
+  await abrirSesion(manejadores);
   const live = JSON.parse(readFileSync(sb.live, "utf-8"));
   const esperado = join(sb.arcade, "sounds", "aoe", "attack.wav");
   assert.equal(live.audio.events["agent.attention"], `file:${esperado}`);
@@ -630,13 +622,15 @@ test("sonidoRotativo sortea en cada llamada entre principal y variantes", async 
 
 test("aplicar gentle deja el Enter a cargo de la extension, no del scheduler", async () => {
   const sb = crearSandbox(["aoe", "gentle"]);
-  const { comando } = await cargarExtension(join(sb.cwd, ".gentle-shell", "agent"));
+  const { comando, manejadores } = await cargarExtension(join(sb.cwd, ".gentle-shell", "agent"));
 
   await comando.handler("gentle --invasividad a", ctxFalso(undefined).ctx);
+  await abrirSesion(manejadores);
   assert.equal(JSON.parse(readFileSync(sb.live, "utf-8")).audio.events["agent.started"], null,
     "gentle rota: si el scheduler también dispara, suenan dos frases");
 
   await comando.handler("aoe --invasividad a", ctxFalso(undefined).ctx);
+  await abrirSesion(manejadores);
   assert.match(JSON.parse(readFileSync(sb.live, "utf-8")).audio.events["agent.started"], /aoe\/agent-started\.wav$/,
     "el resto de los packs sigue como estaba");
 });
@@ -668,4 +662,249 @@ test("el Enter rota solo con el pack gentle", async () => {
   writeFileSync(sb.projectConfig, JSON.stringify(config, null, 2));
   await turno({}, {});
   assert.match(jugados.at(-1) ?? "", /gentle\/a-ver\.wav$/);
+});
+
+/** Dispara el hook de inicio de sesión sin audio: `startup` no saluda. */
+async function abrirSesion(
+  manejadores: Map<string, any>,
+  ctx: any = { ui: { notify: () => {} } },
+  reason = "startup",
+) {
+  const hook = manejadores.get("session_start");
+  assert.equal(typeof hook, "function", "la extension debe escuchar session_start");
+  await hook({ reason }, ctx);
+}
+
+const MAPA = (cwd: string) => join(cwd, ".pi", "extensions", "game-select", "projects.json");
+const respaldos = (cwd: string) =>
+  readdirSync(join(cwd, ".gentle-shell", "config", "gentle-ai"))
+    .filter((f) => f.startsWith("notifications.json.bak-")).length;
+
+test("elegir juego no toca el audio ni los sprites globales", async () => {
+  const sb = crearSandbox(["minecraft"]);
+  const { comando } = await cargarExtension(join(sb.cwd, ".gentle-shell", "agent"));
+  const antesLive = readFileSync(sb.live, "utf-8");
+  const antesAgent = readFileSync(sb.agentConfig, "utf-8");
+
+  await comando.handler("", ctxFalso("minecraft", "a").ctx);
+
+  assert.equal(readFileSync(sb.live, "utf-8"), antesLive, "el audio global es de todos los proyectos: no se toca");
+  assert.equal(readFileSync(sb.agentConfig, "utf-8"), antesAgent, "los sprites globales tampoco");
+  assert.equal(JSON.parse(readFileSync(sb.projectConfig, "utf-8")).emotes[0]["emote-set"], "minecraft");
+  assert.deepEqual(JSON.parse(readFileSync(MAPA(sb.cwd), "utf-8"))[sb.cwd], { juego: "minecraft", invasividad: "todo" });
+});
+
+test("abrir sesion aplica el juego del proyecto con backup", async () => {
+  const sb = crearSandbox(["minecraft"]);
+  const { comando, manejadores } = await cargarExtension(join(sb.cwd, ".gentle-shell", "agent"));
+  await comando.handler("minecraft --invasividad b", ctxFalso(undefined).ctx);
+
+  await abrirSesion(manejadores);
+
+  const live = JSON.parse(readFileSync(sb.live, "utf-8"));
+  assert.match(live.audio.events["agent.failed"], /minecraft\/agent-failed\.wav$/);
+  assert.equal(live.audio.events["subagent.queued"], null, "esencial no incluye queued");
+  assert.equal(live.audio.events["session.shutdown"], null, "shutdown nunca suena");
+  assert.equal(respaldos(sb.cwd), 1, "un backup antes de escribir");
+});
+
+test("abrir sesion dos veces no vuelve a escribir ni a respaldar", async () => {
+  const sb = crearSandbox(["minecraft"]);
+  const { comando, manejadores } = await cargarExtension(join(sb.cwd, ".gentle-shell", "agent"));
+  await comando.handler("minecraft --invasividad a", ctxFalso(undefined).ctx);
+
+  await abrirSesion(manejadores);
+  const primero = readFileSync(sb.live, "utf-8");
+  await abrirSesion(manejadores);
+
+  assert.equal(readFileSync(sb.live, "utf-8"), primero, "idempotente");
+  assert.equal(respaldos(sb.cwd), 1, "no acumula un backup por sesion");
+});
+
+test("un proyecto sin entrada en el mapa vuelve al audio previo", async () => {
+  const sb = crearSandbox(["minecraft"]);
+  const { comando, manejadores } = await cargarExtension(join(sb.cwd, ".gentle-shell", "agent"));
+  const fabrica = readFileSync(sb.live, "utf-8");
+  await comando.handler("minecraft --invasividad a", ctxFalso(undefined).ctx);
+  await abrirSesion(manejadores);
+  assert.notEqual(readFileSync(sb.live, "utf-8"), fabrica, "primero aplica el pack del proyecto");
+
+  // El mapa existe pero no tiene entrada para este cwd: otro proyecto cualquiera.
+  const mapa = JSON.parse(readFileSync(MAPA(sb.cwd), "utf-8"));
+  delete mapa[sb.cwd];
+  mapa["/tmp/otro-proyecto"] = { juego: "minecraft", invasividad: "todo" };
+  writeFileSync(MAPA(sb.cwd), JSON.stringify(mapa, null, 2));
+
+  await abrirSesion(manejadores);
+
+  assert.deepEqual(JSON.parse(readFileSync(sb.live, "utf-8")), JSON.parse(fabrica), "sin entrada se restaura el baseline");
+});
+
+test("el baseline guarda el audio previo y no se pisa con un pack", async () => {
+  const sb = crearSandbox(["minecraft"]);
+  const { comando, manejadores } = await cargarExtension(join(sb.cwd, ".gentle-shell", "agent"));
+  const fabrica = readFileSync(sb.live, "utf-8");
+  const baseline = join(sb.cwd, ".gentle-shell", "config", "gentle-ai", "notifications.baseline.json");
+  await comando.handler("minecraft --invasividad a", ctxFalso(undefined).ctx);
+  await abrirSesion(manejadores);
+
+  assert.equal(readFileSync(baseline, "utf-8"), fabrica, "el baseline es el audio previo, no el pack");
+
+  await comando.handler("minecraft --invasividad c", ctxFalso(undefined).ctx);
+  await abrirSesion(manejadores);
+  assert.equal(readFileSync(baseline, "utf-8"), fabrica, "un pack nuevo no reescribe el baseline");
+});
+
+test("elegir juego crea el config del proyecto y copia el pack de sprites", async () => {
+  const sb = crearSandbox(["minecraft"]);
+  mkdirSync(join(sb.arcade, "emotes", "minecraft", "idle"), { recursive: true });
+  writeFileSync(join(sb.arcade, "emotes", "minecraft", "emotes.json"), "{}");
+  rmSync(sb.projectConfig);
+  const { comando } = await cargarExtension(join(sb.cwd, ".gentle-shell", "agent"));
+
+  await comando.handler("minecraft --invasividad a", ctxFalso(undefined).ctx);
+
+  assert.equal(JSON.parse(readFileSync(sb.projectConfig, "utf-8")).emotes[0]["emote-set"], "minecraft",
+    "crea el config del proyecto si falta");
+  assert.equal(
+    existsSync(join(sb.cwd, ".pi", "extensions", "gentle-emote", "emotes", "minecraft", "emotes.json")),
+    true,
+    "el pack viaja con el proyecto: se resuelve sin el dir global",
+  );
+});
+
+test("un pack que no existe no deja la sesion muda por accidente", async () => {
+  const sb = crearSandbox(["minecraft"]);
+  const { manejadores } = await cargarExtension(join(sb.cwd, ".gentle-shell", "agent"));
+  const mapa = { [sb.cwd]: { juego: "starcraft", invasividad: "todo" } };
+  mkdirSync(join(sb.cwd, ".pi", "extensions", "game-select"), { recursive: true });
+  writeFileSync(MAPA(sb.cwd), JSON.stringify(mapa, null, 2));
+  const antes = readFileSync(sb.live, "utf-8");
+
+  await abrirSesion(manejadores);
+
+  assert.equal(readFileSync(sb.live, "utf-8"), antes, "sin pack no se toca el audio global");
+  assert.equal(respaldos(sb.cwd), 0, "y no deja backup de algo que no aplicó");
+});
+
+// --- T7: saldar los advisories de la review (S6) ---
+
+test("un config vivo ilegible no se pisa y el hook avisa", async () => {
+  const sb = crearSandbox(["minecraft"]);
+  const { comando, manejadores } = await cargarExtension(join(sb.cwd, ".gentle-shell", "agent"));
+  await comando.handler("minecraft --invasividad a", ctxFalso(undefined).ctx);
+  writeFileSync(sb.live, "{ roto");
+  const { ctx, avisos } = ctxFalso(undefined);
+
+  await abrirSesion(manejadores, ctx);
+
+  assert.equal(readFileSync(sb.live, "utf-8"), "{ roto", "no debe reemplazar un archivo ilegible");
+  assert.ok(avisos.some((a) => a.tipo === "warning"), "el hook tiene que avisar el fallo");
+});
+
+test("un config de proyecto ilegible no se pisa", async () => {
+  const sb = crearSandbox(["aoe"]);
+  const { comando } = await cargarExtension(join(sb.cwd, ".gentle-shell", "agent"));
+  writeFileSync(sb.projectConfig, "{ roto");
+
+  const { ctx, avisos } = ctxFalso(undefined);
+  await comando.handler("aoe --invasividad a", ctx);
+
+  assert.equal(readFileSync(sb.projectConfig, "utf-8"), "{ roto");
+  assert.ok(avisos.some((a) => a.tipo === "warning" && /JSON válido/.test(a.mensaje)), "tiene que avisar");
+});
+
+test("dos sesiones en el mismo segundo no se pisan el respaldo", async () => {
+  const sb = crearSandbox(["minecraft", "aoe"]);
+  const { comando, manejadores } = await cargarExtension(join(sb.cwd, ".gentle-shell", "agent"));
+  const mapaPath = MAPA(sb.cwd);
+  await comando.handler("minecraft --invasividad a", ctxFalso(undefined).ctx);
+  await abrirSesion(manejadores);
+  const mapa = JSON.parse(readFileSync(mapaPath, "utf-8"));
+  mapa[sb.cwd] = { juego: "aoe", invasividad: "todo" };
+  writeFileSync(mapaPath, JSON.stringify(mapa));
+
+  await abrirSesion(manejadores);
+
+  const bs = readdirSync(join(sb.cwd, ".gentle-shell", "config", "gentle-ai"))
+    .filter((f) => f.startsWith("notifications.json.bak-"));
+  assert.equal(bs.length, 2, "cada aplicación deja su respaldo");
+  assert.equal(new Set(bs).size, 2, "con nombres distintos, sin pisarse");
+});
+
+test("un baseline ilegible no vacía el audio global", async () => {
+  const sb = crearSandbox(["minecraft"]);
+  const { manejadores } = await cargarExtension(join(sb.cwd, ".gentle-shell", "agent"));
+  mkdirSync(join(sb.cwd, ".pi", "extensions", "game-select"), { recursive: true });
+  writeFileSync(MAPA(sb.cwd), JSON.stringify({ "/tmp/otro": { juego: "aoe", invasividad: "todo" } }));
+  writeFileSync(join(sb.cwd, ".gentle-shell", "config", "gentle-ai", "notifications.baseline.json"), "{ roto");
+  const antes = readFileSync(sb.live, "utf-8");
+
+  await abrirSesion(manejadores);
+
+  assert.equal(readFileSync(sb.live, "utf-8"), antes, "no debe asignar un evento vacío");
+});
+
+test("la retención de respaldos deja los últimos diez", async () => {
+  const sb = crearSandbox(["minecraft"]);
+  const { comando, manejadores } = await cargarExtension(join(sb.cwd, ".gentle-shell", "agent"));
+  const dir = join(sb.cwd, ".gentle-shell", "config", "gentle-ai");
+  for (let i = 0; i < 14; i += 1) {
+    writeFileSync(join(dir, `notifications.json.bak-2020010${i % 10}-00000${i % 10}-999-${i}`), "{}");
+  }
+  await comando.handler("minecraft --invasividad a", ctxFalso(undefined).ctx);
+
+  await abrirSesion(manejadores);
+
+  const bs = readdirSync(dir).filter((f) => f.startsWith("notifications.json.bak-"));
+  assert.ok(bs.length <= 10, `quedaron ${bs.length} respaldos`);
+});
+
+test("reload aplica el audio igual que startup", async () => {
+  const sb = crearSandbox(["minecraft"]);
+  const { comando, manejadores } = await cargarExtension(join(sb.cwd, ".gentle-shell", "agent"));
+  await comando.handler("minecraft --invasividad a", ctxFalso(undefined).ctx);
+
+  await abrirSesion(manejadores, { ui: { notify: () => {} } }, "reload");
+
+  assert.match(
+    JSON.parse(readFileSync(sb.live, "utf-8")).audio.events["agent.failed"],
+    /minecraft\/agent-failed\.wav$/,
+    "/reload dispara session_start con reason reload",
+  );
+});
+
+test("la poda no toca respaldos que no escribió el hook", async () => {
+  const sb = crearSandbox(["minecraft"]);
+  const { comando, manejadores } = await cargarExtension(join(sb.cwd, ".gentle-shell", "agent"));
+  const dir = join(sb.cwd, ".gentle-shell", "config", "gentle-ai");
+  const viejo = join(dir, "notifications.json.bak-20261107-233953");
+  writeFileSync(viejo, "{}");
+  // Ordenan DESPUÉS del viejo: si la poda barre por prefijo, se lo lleva.
+  for (let i = 0; i < 14; i += 1) {
+    writeFileSync(join(dir, `notifications.json.bak-2026123${i % 10}-00000${i % 10}-${1000 + i}`), "{}");
+  }
+
+  await comando.handler("minecraft --invasividad a", ctxFalso(undefined).ctx);
+  await abrirSesion(manejadores);
+
+  assert.equal(existsSync(viejo), true, "un respaldo viejo ajeno al hook no se borra");
+  const propios = readdirSync(dir).filter((f) => /^notifications\.json\.bak-\d{8}-\d{6}-\d+/.test(f));
+  assert.ok(propios.length <= 10, `quedaron ${propios.length} respaldos propios`);
+});
+
+test("un pack existente sin marcador se completa, no se borra", async () => {
+  const sb = crearSandbox(["minecraft"]);
+  mkdirSync(join(sb.arcade, "emotes", "minecraft", "idle"), { recursive: true });
+  writeFileSync(join(sb.arcade, "emotes", "minecraft", "emotes.json"), "{}");
+  writeFileSync(join(sb.arcade, "emotes", "minecraft", "idle", "idle_00.png"), "PNG");
+  const destino = join(sb.cwd, ".pi", "extensions", "gentle-emote", "emotes", "minecraft");
+  mkdirSync(destino, { recursive: true });
+  writeFileSync(join(destino, "curado.txt"), "mío");
+  const { comando } = await cargarExtension(join(sb.cwd, ".gentle-shell", "agent"));
+
+  await comando.handler("minecraft --invasividad a", ctxFalso(undefined).ctx);
+
+  assert.equal(readFileSync(join(destino, "curado.txt"), "utf-8"), "mío", "no borra contenido del usuario");
+  assert.equal(existsSync(join(destino, "emotes.json")), true, "completa el pack que faltaba");
 });

@@ -54,7 +54,7 @@ El detalle pieza por pieza:
 | Sonidos de los juegos | packs de cada juego (ver aviso de licencia) | sus dueños | — |
 
 Si en algún momento querés devolver algo aguas arriba —el menú de dos pasos, el
-cap del `debug.log`, el generador del arte— ahí sí conviene un fork real de
+generador del arte— ahí sí conviene un fork real de
 `efolchmontiel/gentle-emote`: el fork existe para mandar PRs, no para publicar.
 
 ### Sonidos de `gentle`
@@ -122,7 +122,9 @@ schema `gentle-emote-arcade.sounds/v1`, 14 eventos). Extra: `misc`
 (un evento de cada juego, reutilizando `pack/tallo` de los otros packs: no
 tiene audio propio) y `gentle` oculto (14 frases del streamer + activación «abuela», ver
 *sounds/gentle/README.md*; sus escenas también son propias, ver *Créditos y
-linaje*). `scripts/select_game.sh <juego>` cambia sprites y sonidos con backup.
+linaje*). `scripts/select_game.sh <juego>` elige sprites y sonidos para el
+proyecto actual (el audio global lo aplica el hook `session_start` al abrir
+sesión, ver *Elegir juego*).
   El easter egg `abuela` (alias de `gentle`) activa el pack oculto con la frase de
   «abuela» (`abuela-1`), sus 14 frases y sus propias escenas. Y al abrir una
   **sesión nueva** (`/new`, cartel «✓ New session started») suena la frase
@@ -132,7 +134,7 @@ linaje*). `scripts/select_game.sh <juego>` cambia sprites y sonidos con backup.
 
 ## Elegir juego
 
-Dos caminos, los dos aplican sprites y sonidos juntos:
+Dos caminos, los dos eligen sprites y sonidos por proyecto:
 
 - **Desde Gentle Shell**: `/emote:juego` abre el menú interactivo de dos pasos:
   1. **juego** (`aoe`, `cs16`, `starcraft`, `lol`, `minecraft`, `misc`, `gentle`);
@@ -154,46 +156,62 @@ Dos caminos, los dos aplican sprites y sonidos juntos:
   `/emote:juego <juego> [set]`, con el nombre, un prefijo único o el número de
   la lista; y `--dry-run` muestra el plan sin escribir nada (ahí el set guardado
   del proyecto es el default).
-- **Desde la terminal**: `scripts/select_game.sh <juego> [--invasividad a|b|c]`,
-  con las mismas banderas (`--help` para el detalle).
+- **Desde la terminal**: `scripts/select_game.sh <juego> [--proyecto RUTA]
+  [--invasividad a|b|c]`, con las mismas banderas (`--help` para el detalle).
 
-Los dos escriben el `emote-set` en el `config.json` global y de proyecto, los
-`file:` de los eventos en `~/.gentle-shell/config/gentle-ai/notifications.json`
-con backup fechado al lado, y guardan juego + set elegidos por proyecto en
-`.pi/extensions/game-select/projects.json` (así el segundo arranque ya sabe qué
-set usabas). Los tests de la extensión cubren el menú de dos pasos y los tres
-sets: `node --test tests/game-select.test.ts`.
+Los dos escriben **sólo en el proyecto destino**: el `emote-set` en
+`<proyecto>/.pi/extensions/gentle-emote/config.json` (lo crean si falta, con
+backup al lado), el pack de sprites en
+`<proyecto>/.pi/extensions/gentle-emote/emotes/<set>`, y juego + set elegidos
+en el mapa junto al arcade (`.pi/extensions/game-select/projects.json`, así el
+segundo arranque ya sabe qué set usabas). Nunca tocan
+`~/.gentle-shell/config/gentle-ai/notifications.json`: el audio de Gentle Shell
+es un único archivo global para todas las sesiones, y lo aplica el hook
+`session_start` de la extensión al abrir sesión en el proyecto, con backup
+fechado al lado; la primera vez deja `notifications.baseline.json` con el audio
+previo al primer pack, y un proyecto sin entrada vuelve a ese baseline. Es
+idempotente: si la config ya está como debe, no escribe ni respalda. Los tests
+de la extensión cubren el menú de dos pasos, los tres sets y el hook;
+`tests/select-game.test.ts` cubre que el selector escribe sólo el proyecto.
 
 ## Instalación
 
-1. Copiar `emotes/` a `~/.gentle-shell/agent/extensions/gentle-emote/emotes/`
-   (global) o a `<proyecto>/.pi/extensions/gentle-emote/emotes/`.
-2. Elegir set en `config.json`: `{ "emotes": [{ "model": "*", "emote-set": "aoe" }] }`.
-3. Instalar `extensions/game-select/index.ts` **global**, no por proyecto, para que
-   el menú exista en cualquier sesión: `ln -sf "$PWD/extensions/game-select/index.ts" ~/.gentle-shell/agent/extensions/game-select/index.ts`.
+1. Instalar `extensions/game-select/index.ts` **global**, no por proyecto, para
+   que el menú y el hook existan en cualquier sesión:
+   `ln -sf "$PWD/extensions/game-select/index.ts" ~/.gentle-shell/agent/extensions/game-select/index.ts`.
    El `projects.json` sigue viviendo junto al arcade (`Proyectos/AoE/.pi/extensions/game-select/`),
    así cada proyecto recuerda su juego aunque arranques desde otra carpeta.
+2. Elegir juego en cada proyecto: `scripts/select_game.sh <juego>` (o
+   `/emote:juego`). El selector crea
+   `<proyecto>/.pi/extensions/gentle-emote/config.json` con el `emote-set`
+   (`{ "emotes": [{ "model": "*", "emote-set": "aoe" }] }`), copia el pack de
+   sprites a `<proyecto>/.pi/extensions/gentle-emote/emotes/<set>` y guarda la
+   entrada en el `projects.json`. No hace falta copiar `emotes/` a mano: el dir
+   global del avatar es biblioteca compartida, no selección.
+3. El audio global lo aplica el hook `session_start` al abrir sesión, con
+   backup fechado y `notifications.baseline.json` como punto de vuelta. Para
+   forzar un pack a mano queda `scripts/apply_sounds.sh`.
 4. `/reload` y `/emote demo`.
 
-Los tests de la extensión corren con el Node que trae Gentle Shell:
-`node --test tests/game-select.test.ts` (trabajan en un sandbox temporal, no
-tocan la config real).
+Los tests corren con el Node que trae Gentle Shell:
+`node --test tests/game-select.test.ts tests/select-game.test.ts` (trabajan en
+un sandbox temporal y con `PI_GAME_SELECT_MAP`, no tocan la config real).
 
 ## Logs acotados
 
 El paquete upstream escribe `debug.log` en cada frame del avatar y no rota
 nunca: con `debug: true` llegó a 558 MB en `~/.gentle-shell/agent/npm/node_modules/gentle-emote/`.
-Este repo lo mantiene acotado por cuatro lados:
+Este repo lo mantiene acotado por tres lados, y no parchea el paquete npm
+instalado:
 
 - `debug: false` en los `config.json` (también es el default del paquete): no
 escribe nada mientras esté apagado.
-- `scripts/patch_debug_log.sh` le pone un cap de 2 MB con rotación a
-`debug.log.1`, así ni con `debug` prendido puede llenar el disco. Es idempotente
-y valida el sha256 del archivo original antes de tocarlo. **`pi update`
-reinstala el paquete y lo borra: volvé a correrlo.**
 - la traza `/tmp/game-select.log` se trunca sola a 64 KB.
-- `scripts/check_install.sh` avisa si falta el cap, si el log creció o si queda
-algún archivo ajeno (de root) en `.pi/`.
+- `scripts/check_install.sh` avisa si el log creció o si queda algún archivo
+ajeno (de root) en `.pi/`, y marca DRIFT si el paquete npm quedó parcheado a
+mano (`MAX_LOG_BYTES` en `src/log.ts`): en ese caso `pi update` lo devuelve a
+upstream. También verifica que los packs de sprites del proyecto coincidan con
+el repo y que los `file:` de la config viva apunten a archivos que existen.
 
 ## Cómo reparte el canal
 

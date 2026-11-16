@@ -3,6 +3,12 @@
 # Gentle Shell. El repo solo guarda nombres; el absoluto file: se resuelve acá,
 # en tu máquina, al aplicar. Orden: validar todo -> backup -> escribir.
 #
+# OJO: la config viva es GLOBAL, una sola para todas las sesiones. El camino
+# normal es elegir el juego por proyecto (`select_game.sh` o `/emote:juego`) y
+# dejar que el hook `session_start` la aplique. Este script queda para forzar un
+# pack a mano (reparar, revisar); al abrir la próxima sesión el hook la reescribe
+# según el proyecto.
+#
 # Uso: ./scripts/apply_sounds.sh [juego] [--proyecto RUTA] [--invasividad NIVEL] [--dry-run]
 #       juego: aoe (default) | minecraft | cs16 | starcraft | lol | misc | gentle | abuela
 #       --proyecto RUTA: lee el mapa .pi/extensions/game-select/projects.json
@@ -19,7 +25,7 @@ INVASIVIDAD=""
 while [ $# -gt 0 ]; do
     case "$1" in
         -n|--dry-run) DRY=1; shift ;;
-        -h|--help) sed -n '2,10p' "$0"; exit 0 ;;
+        -h|--help) sed -n '2,16p' "$0"; exit 0 ;;
         --proyecto) PROYECTO="$2"; shift 2 ;;
         --invasividad) INVASIVIDAD="$2"; shift 2 ;;
         -*) echo "opción desconocida: $1" >&2; exit 2 ;;
@@ -269,4 +275,6 @@ finally:
 
 print("backup:", backup)
 print("aplicados", sum(1 for e in EVENTOS if e in permitidos and plan[e] is not None), "eventos de", juego, "desde", base)
+print("aviso: la config viva es global; al abrir la próxima sesión el hook la")
+print("       reescribe según el juego elegido en ese proyecto.")
 PY
