@@ -1,4 +1,8 @@
 <p align="center">
+  <img src="docs/assets/casco-emblema.png" alt="casco emblema" width="72">
+</p>
+
+<p align="center">
   <img src="docs/assets/band.svg" alt="" width="100%">
 </p>
 
