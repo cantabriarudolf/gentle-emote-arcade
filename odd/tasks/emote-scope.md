@@ -113,3 +113,25 @@ L12. Review nativa: cerrada y aprobada (lineage `review-1e9f9f92d6fec840`,
 authority burned), 14 advisories informativos, ninguno abre corrección. El
 candado de lineage se resolvió reanudando, sin reset. El humano autorizó
 saldarlos: «en criollo, si hay algo que saldar dale segun tu plan» → T7.
+
+L13. C6 (`ac7b853`): T7 saldado. Config que no parsea ya no se pisa (extensión
+y script, con aviso en la UI), respaldos atómicos con nombre único, motivo
+`error` diferenciado de `sin-cambio`, retención de 10 y copia de packs
+reanudable, más el test de `session_start` con `reason: "reload"`.
+`node --test` 62/62. Review nativa aprobada: lineage `review-1c06506e4f84fa36`,
+sólo el corte `b21c3f3..ac7b853`, 6 advisories nuevos.
+
+L14. C7 (`914dd76`): los 6 advisories del corte anterior. La poda ahora sólo
+mira nombres propios (`bak-YYYYMMDD-HHMMSS-<pid>`), ordena por fecha real y
+deja rastro; el sello conservaba los guiones del ISO y por eso la poda no
+reconocía sus archivos (lo encontró el test). La copia de packs mezcla sobre
+lo que haya con marca `.pack-completo`, sin borrar. `node --test` 64/64.
+ASSESS de este corte: riesgo medio, `reviewDue: false` (bajo budget): no
+corresponde review nativa. Push `b21c3f3..914dd76`.
+
+L15. Routing de reviewers reparado mientras tanto: los seis roles `review-*`
+pasan a `nan/deepseek-v4-flash` en `models.json` y en el perfil activo `nan`
+de `profiles.json`; `review-refuter` y `review-validator` quedan fuera de
+`profiles.json` porque no son agentes con `.md`. `check-routing.py`: 0
+problemas, 13 roles. Rige desde la próxima sesión: el perfil se congela al
+arrancar.
