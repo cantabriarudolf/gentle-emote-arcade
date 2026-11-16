@@ -1,5 +1,5 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { existsSync, readFileSync, writeFileSync, readdirSync, appendFileSync, statSync, mkdirSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync, readdirSync, appendFileSync, statSync, mkdirSync, cpSync } from "node:fs";
 import { join, dirname, basename } from "node:path";
 import { execFile } from "node:child_process";
 
@@ -24,9 +24,21 @@ export interface Opciones {
 }
 
 export function setEmoteSet(path: string, juego: string): boolean {
-  if (!existsSync(path)) return false;
+  let data: any = {};
+  if (existsSync(path)) {
+    try {
+      data = JSON.parse(readFileSync(path, "utf-8"));
+    } catch {
+      data = {};
+    }
+  } else {
+    try {
+      mkdirSync(dirname(path), { recursive: true });
+    } catch {
+      /* si no se puede crear, abajo falla la escritura */
+    }
+  }
   try {
-    const data = JSON.parse(readFileSync(path, "utf-8"));
     data.emotes = [{ model: "*", "emote-set": juego }];
     writeFileSync(path, JSON.stringify(data, null, 2) + "\n");
     return true;
@@ -171,6 +183,138 @@ function readProjectEntry(mapPath: string | null, proyecto: string): { juego?: s
     /* ignore */
   }
   return {};
+}
+
+export interface ResultadoAplicacion {
+  aplicado: boolean;
+  motivo: "sin-arcade" | "sin-pack" | "sin-cambio" | "pack" | "baseline";
+  juego?: string;
+  respaldo?: string;
+}
+
+/** Copia del audio previo al primer pack, al lado del archivo vivo. */
+export function baselinePath(livePath: string): string {
+  return join(dirname(livePath), "notifications.baseline.json");
+}
+
+/**
+ * Copia el pack de sprites al proyecto. El resolver del avatar mira primero
+ * `<proyecto>/.pi/extensions/gentle-emote/emotes/<set>`, así que el proyecto
+ * queda autosuficiente y no depende del dir global ni de este repo.
+ */
+export function copiarPackSprites(arcade: string, proyecto: string, juego: string): string | null {
+  if (!juego) return null;
+  const origen = join(arcade, "emotes", juego);
+  if (!existsSync(origen)) return null;
+  const destino = join(proyecto, ".pi", "extensions", "gentle-emote", "emotes", juego);
+  if (existsSync(destino)) return destino;
+  try {
+    mkdirSync(dirname(destino), { recursive: true });
+    cpSync(origen, destino, { recursive: true });
+    return destino;
+  } catch {
+    return null;
+  }
+}
+
+/** Eventos tal como van al archivo vivo: `file:` absoluto, shutdown mudo y
+ * `gentle` sin el Enter del scheduler (lo rota la extensión). */
+export function eventosVivos(
+  juego: string,
+  eventos: Record<string, string | null>,
+): Record<string, string | null> {
+  const salida: Record<string, string | null> = {};
+  for (const evento of EVENTOS) {
+    const val = eventos[evento];
+    salida[evento] = val == null ? null : val.startsWith("builtin:") ? val : `file:${val}`;
+  }
+  salida["session.shutdown"] = null;
+  if (juego === "gentle") salida["agent.started"] = null;
+  return salida;
+}
+
+function leerEventos(livePath: string): Record<string, unknown> {
+  try {
+    const data = JSON.parse(readFileSync(livePath, "utf-8"));
+    return (data?.audio?.events ?? {}) as Record<string, unknown>;
+  } catch {
+    return {};
+  }
+}
+
+function normalizado(ev: Record<string, unknown>, claves: string[]): string {
+  const salida: Record<string, unknown> = {};
+  for (const clave of claves) salida[clave] = ev[clave] ?? null;
+  return JSON.stringify(salida);
+}
+
+/**
+ * Aplica al archivo vivo de Gentle Shell el juego que ESTE proyecto eligió.
+ *
+ * El audio no tiene capa por proyecto en Gentle Shell: hay un solo
+ * `notifications.json` para todas las sesiones. Por eso elegir juego no lo
+ * escribe; se aplica acá, al abrir sesión, y un proyecto sin selección vuelve
+ * al audio previo (`notifications.baseline.json`). Es idempotente: si el
+ * archivo ya está como debe, no escribe ni deja backup.
+ */
+export function aplicarJuegoDeProyecto(opciones: {
+  cwd: string;
+  arcade: string | null;
+  livePath: string;
+  dryRun?: boolean;
+}): ResultadoAplicacion {
+  const { cwd, arcade, livePath, dryRun = false } = opciones;
+  if (!arcade) return { aplicado: false, motivo: "sin-arcade" };
+
+  const entry = readProjectEntry(projectsPath(cwd, arcade), cwd);
+  const juego = typeof entry.juego === "string" ? entry.juego : "";
+  const invasividad = normalizarInvasividad(String(entry.invasividad ?? ""));
+  const baseline = baselinePath(livePath);
+  const antes = leerEventos(livePath);
+
+  let objetivo: Record<string, string | null>;
+  if (juego) {
+    const { eventos, asignados } = planSonidos(arcade, juego, invasividad);
+    // Un pack sin archivos dejaría la sesión muda: mejor no tocar nada.
+    if (asignados === 0) return { aplicado: false, motivo: "sin-pack", juego };
+    objetivo = eventosVivos(juego, eventos);
+  } else {
+    if (!existsSync(baseline)) return { aplicado: false, motivo: "sin-cambio" };
+    objetivo = leerEventos(baseline) as Record<string, string | null>;
+  }
+
+  const claves = [...EVENTOS, "session.shutdown", ...Object.keys(objetivo)];
+  if (normalizado(antes, claves) === normalizado(objetivo as Record<string, unknown>, claves)) {
+    return { aplicado: false, motivo: "sin-cambio", juego };
+  }
+  if (dryRun) return { aplicado: false, motivo: juego ? "pack" : "baseline", juego };
+
+  try {
+    mkdirSync(dirname(livePath), { recursive: true });
+    if (!existsSync(baseline) && existsSync(livePath)) {
+      writeFileSync(baseline, readFileSync(livePath, "utf-8"));
+    }
+    let respaldo: string | undefined;
+    if (existsSync(livePath)) {
+      const sello = new Date().toISOString().replace(/[:.]/g, "").slice(0, 15);
+      respaldo = `${livePath}.bak-${sello}`;
+      writeFileSync(respaldo, readFileSync(livePath, "utf-8"));
+    }
+    let vivo: any = {};
+    try {
+      vivo = JSON.parse(readFileSync(livePath, "utf-8"));
+    } catch {
+      vivo = {};
+    }
+    vivo.audio = vivo.audio ?? {};
+    vivo.audio.events = vivo.audio.events ?? {};
+    if (juego) Object.assign(vivo.audio.events, objetivo);
+    else vivo.audio.events = { ...objetivo };
+    writeFileSync(livePath, JSON.stringify(vivo, null, 2));
+    return { aplicado: true, motivo: juego ? "pack" : "baseline", juego, respaldo };
+  } catch {
+    return { aplicado: false, motivo: "sin-cambio", juego };
+  }
 }
 
 const TRAZA_PATH = "/tmp/game-select.log";
@@ -481,6 +625,16 @@ export default function (pi: ExtensionAPI) {
 
   // "✓ New session started": frase icónica del pack, sólo en sesión nueva.
   pi.on?.("session_start", async (event: any) => {
+    // El audio global es uno solo para todas las sesiones: al abrir se aplica el
+    // juego de ESTE proyecto, o se vuelve al audio previo si no eligió ninguno.
+    if (home) {
+      const livePath = join(home, ".gentle-shell", "config", "gentle-ai", "notifications.json");
+      const resultado = aplicarJuegoDeProyecto({ cwd, arcade: findArcade(cwd), livePath });
+      traza(
+        `hook audio -> ${resultado.motivo}${resultado.juego ? ` ${resultado.juego}` : ""}` +
+          `${resultado.respaldo ? ` (backup ${basename(resultado.respaldo)})` : ""}`,
+      );
+    }
     const reason = event?.reason;
     if (reason !== "new") return;
     const arcade = findArcade(cwd);
@@ -589,10 +743,13 @@ export default function (pi: ExtensionAPI) {
       }
 
       // Sprites: `gentle` trae sus propias escenas (fork upstream); `misc` es
-      // sólo sonidos mezclados, así que hereda el arte de aoe.
+      // sólo sonidos mezclados, así que hereda el arte de aoe. Se escribe sólo
+      // en el proyecto: el global lo resuelve el hook al abrir sesión, así
+      // elegir acá no le cambia el arte ni el audio a los demás proyectos.
       const spritesJuego = juego === "misc" ? "aoe" : juego;
       if (!opciones.dryRun) {
-        for (const p of configs) setEmoteSet(p, spritesJuego);
+        setEmoteSet(configs[1], spritesJuego);
+        if (arcade) copiarPackSprites(arcade, opciones.proyecto, spritesJuego);
         guardarProyecto(mapPath, opciones.proyecto, { juego, invasividad });
       }
 
@@ -614,28 +771,6 @@ export default function (pi: ExtensionAPI) {
         return;
       }
 
-      const livePath = join(home, ".gentle-shell", "config", "gentle-ai", "notifications.json");
-      if (existsSync(livePath)) {
-        try {
-          const stamp = new Date().toISOString().replace(/[:.]/g, "").slice(0, 15);
-          writeFileSync(`${livePath}.bak-${stamp}`, readFileSync(livePath, "utf-8"));
-          const live = JSON.parse(readFileSync(livePath, "utf-8"));
-          live.audio = live.audio ?? {};
-          live.audio.events = live.audio.events ?? {};
-          const ev = live.audio.events;
-          for (const evento of EVENTOS) {
-            const val = eventos[evento];
-            ev[evento] = val == null ? null : val.startsWith("builtin:") ? val : `file:${val}`;
-          }
-          ev["session.shutdown"] = null;
-          // `gentle` rota la frase del Enter por ocurrencia: la reproduce la
-          // extensión en `turn_start`, así que el scheduler no debe duplicarla.
-          if (juego === "gentle") ev["agent.started"] = null;
-          writeFileSync(livePath, JSON.stringify(live, null, 2));
-        } catch {
-          /* sin pack de sonidos: quedan solo los sprites */
-        }
-      }
       let sonido: ResultadoSonido = { ok: true };
       if (juego === "gentle") {
         sonido = await sonarCoin(arcade);
@@ -652,7 +787,8 @@ export default function (pi: ExtensionAPI) {
       }
       const recargar = typeof ctx?.reload === "function";
       ctx.ui?.notify?.(
-        `[juego] → ${juego} (sprites + ${asignados} sonidos, ${invasividad}). ` +
+        `[juego] → ${juego} (${asignados} sonidos, ${invasividad}) en este proyecto; ` +
+          `el audio global se aplica al abrir sesión. ` +
           (recargar ? "Recargado." : "/reload para ver+oir."),
         "info",
       );
