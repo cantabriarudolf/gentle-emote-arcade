@@ -90,3 +90,7 @@ L9. Verificación final: `node --test tests/game-select.test.ts tests/packs.test
 L10. C4: `notifications.json` se escribe con tmp + rename. Dos sesiones en
 proyectos distintos comparten ese archivo (la última que abre manda), así que
 una lectura nunca puede verlo a medio escribir.
+
+L11. C5: `tests/select-game.test.ts` cubre el selector bash (config, pack y
+mapa por proyecto; dos proyectos sin pisarse; `--dry-run` sin escrituras). Con
+eso el corte de scripts deja de depender de una prueba manual: `Risk: none`.

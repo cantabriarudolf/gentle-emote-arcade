@@ -171,8 +171,8 @@ es un único archivo global para todas las sesiones, y lo aplica el hook
 fechado al lado; la primera vez deja `notifications.baseline.json` con el audio
 previo al primer pack, y un proyecto sin entrada vuelve a ese baseline. Es
 idempotente: si la config ya está como debe, no escribe ni respalda. Los tests
-de la extensión cubren el menú de dos pasos, los tres sets y el hook:
-`node --test tests/game-select.test.ts`.
+de la extensión cubren el menú de dos pasos, los tres sets y el hook;
+`tests/select-game.test.ts` cubre que el selector escribe sólo el proyecto.
 
 ## Instalación
 
@@ -193,9 +193,9 @@ de la extensión cubren el menú de dos pasos, los tres sets y el hook:
    forzar un pack a mano queda `scripts/apply_sounds.sh`.
 4. `/reload` y `/emote demo`.
 
-Los tests de la extensión corren con el Node que trae Gentle Shell:
-`node --test tests/game-select.test.ts` (trabajan en un sandbox temporal, no
-tocan la config real).
+Los tests corren con el Node que trae Gentle Shell:
+`node --test tests/game-select.test.ts tests/select-game.test.ts` (trabajan en
+un sandbox temporal y con `PI_GAME_SELECT_MAP`, no tocan la config real).
 
 ## Logs acotados
 
