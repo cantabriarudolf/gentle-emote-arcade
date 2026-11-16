@@ -7,7 +7,7 @@
 #     y vs <proyecto>/.pi/extensions/gentle-emote/emotes
 #   - extensions/game-select/index.ts vs la copia instalada (sigue symlinks)
 #   - cableado de sonidos en ~/.gentle-shell/config/gentle-ai/notifications.json
-#   - debug.log gigante del paquete npm y flags debug en los config.json
+#   - packs de sprites del proyecto y paquete npm sin parches locales
 set -uo pipefail
 
 QUIET=0
@@ -36,23 +36,28 @@ BEHIND="$(git rev-list --count "HEAD..@{u}" 2>/dev/null || echo "?")"
 [ "$BEHIND" != "0" ] && drift "$BEHIND commit(s) atrás de origin"
 
 echo "== emotes =="
-for DESTINO in \
-    "$AGENT_DIR/extensions/gentle-emote/emotes" \
-    "$PROYECTO/.pi/extensions/gentle-emote/emotes"; do
-    if [ ! -d "$DESTINO" ]; then
-        drift "no existe $DESTINO"
-        continue
-    fi
-    for SET in "$REPO"/emotes/*/; do
+PROY_EMOTES="$PROYECTO/.pi/extensions/gentle-emote/emotes"
+if [ ! -d "$PROY_EMOTES" ]; then
+    drift "no existe $PROY_EMOTES"
+else
+    for SET in "$PROY_EMOTES"/*/; do
+        [ -d "$SET" ] || continue
         NOMBRE="$(basename "$SET")"
         case "$NOMBRE" in *.bak) continue ;; esac
-        if ! diff -rq "$SET" "$DESTINO/$NOMBRE" >/dev/null 2>&1; then
-            drift "set $NOMBRE distinto en $DESTINO"
+        if [ -d "$REPO/emotes/$NOMBRE" ] && ! diff -rq "$REPO/emotes/$NOMBRE" "$SET" >/dev/null 2>&1; then
+            drift "set $NOMBRE del proyecto distinto del repo"
         fi
     done
-    PNGS=$(find "$DESTINO" -name '*.png' 2>/dev/null | wc -l)
-    ok "$DESTINO ($PNGS PNG)"
-done
+    PNGS=$(find "$PROY_EMOTES" -name '*.png' 2>/dev/null | wc -l)
+    ok "$PROY_EMOTES ($PNGS PNG, resuelve por proyecto)"
+fi
+GLOBAL_EMOTES="$AGENT_DIR/extensions/gentle-emote/emotes"
+if [ -d "$GLOBAL_EMOTES" ]; then
+    EXTRA=$(find "$GLOBAL_EMOTES" -mindepth 1 -maxdepth 1 -type d \
+        ! -name 'gentleman*' ! -name 'ascii*' 2>/dev/null | wc -l)
+    [ "$EXTRA" != "0" ] && \
+        echo "WARN: $EXTRA pack(s) copiados en $GLOBAL_EMOTES: el avatar ya resuelve por proyecto"
+fi
 
 echo "== extension game-select =="
 INSTALADA="$PROYECTO/.pi/extensions/game-select/index.ts"
@@ -90,10 +95,10 @@ fi
 
 echo "== higiene =="
 LOG_TS="$AGENT_DIR/npm/node_modules/gentle-emote/src/log.ts"
-if [ -f "$LOG_TS" ] && ! grep -q "MAX_LOG_BYTES" "$LOG_TS" 2>/dev/null; then
-    drift "falta el cap de debug.log: corré scripts/patch_debug_log.sh (pi update lo borra)"
+if [ -f "$LOG_TS" ] && grep -q "MAX_LOG_BYTES" "$LOG_TS" 2>/dev/null; then
+    drift "el paquete npm está parcheado a mano: corré 'pi update' para dejarlo como upstream"
 else
-    ok "cap de debug.log presente (rota a 2 MB)"
+    ok "paquete npm sin parches locales"
 fi
 if [ -f "$NPM_LOG" ]; then
     BYTES=$(stat -c%s "$NPM_LOG" 2>/dev/null || echo 0)
