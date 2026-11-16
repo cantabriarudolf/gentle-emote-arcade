@@ -51,11 +51,13 @@ detalle del porqué, evento por evento, está en
 | `gentle` | 76 PNG en 24 carpetas | sí | **del fork upstream**, sin retocar (MIT, ver `emotes/gentle/LICENSE`) |
 | `gentle-yolo` | 76 PNG en 24 carpetas | sí | gemelo YOLO del fork, sin retocar (MIT) |
 
-## Instalador local
+## Instalación por proyecto
 
-`instalar-emote-local.sh` sincroniza los 9 sets (incluidos los gemelos `-yolo`)
-a `.pi/extensions/gentle-emote/emotes/` y al directorio de usuario, junto con
-`config.json` y el comando `/juego`.
+No hay instalador que sincronice sets a mano: elegir juego es por proyecto con
+`scripts/select_game.sh <juego>` o `/emote:juego`, que escriben el `config.json`
+y el pack de sprites en `<proyecto>/.pi/extensions/gentle-emote/` y guardan la
+entrada en el mapa al lado del arcade. El dir de emotes global queda como
+biblioteca compartida, no selección.
 
 ## Demo y galería
 
@@ -192,13 +194,15 @@ Referencia de la tanda completa de las 24 escenas:
 - `seleccion.json` guarda el mapeo en `choices` (evento → nombre sin
   extensión, portable: se resuelve contra `soundsDir`).
 
-### La selección todavía no está aplicada en la config viva
+### La config viva la aplica el hook, no el selector
 
-`sounds/aoe/seleccion.json` es la selección **v2** (carpeta `waw/v2`). La config de
-notificaciones de Gentle Shell
-(`~/.gentle-shell/config/gentle-ai/notifications.json`) hoy sigue apuntando a
-los archivos de `waw/` (v1) para 11 eventos. Aplicar la v2 es un paso aparte,
-con backup, y no lo hizo este corte.
+La config de notificaciones de Gentle Shell
+(`~/.gentle-shell/config/gentle-ai/notifications.json`) ya no la escribe el
+selector: elegir juego sólo escribe en el proyecto. El audio global lo aplica
+el hook `session_start` de `game-select` al abrir sesión en el proyecto, con
+backup fechado al lado; la primera vez deja `notifications.baseline.json` con
+el audio previo al primer pack, y un proyecto sin entrada vuelve a ese
+baseline. Para forzar un pack a mano queda `scripts/apply_sounds.sh`.
 
 ## Verificación observada
 
@@ -321,9 +325,8 @@ contenido.
 
 ## Antes de pushear (decisiones que no toma este paso)
 
-1. **Repo**: `git init` en `gentle-emote-arcade/`, revisar
-   `git status --short` y confirmar que la lista coincide con los 108 archivos
-   de acá. El árbol sigue sin `.git`; no se creó ni se pusheó nada.
+1. **Repo**: ya tiene `.git` con `origin` (`cantabriarudolf/gentle-emote-arcade`).
+   Antes de pushear, revisá `git status --short` y `scripts/check_install.sh`.
 2. **Licencia**: resuelto. El repo es MIT ([`LICENSE`](../LICENSE)), la misma de
    los upstreams, con la atribución del avatar en [`NOTICE.md`](../NOTICE.md). El
    audio de los juegos no tiene licencia verificada y se publica igual, por
@@ -331,10 +334,10 @@ contenido.
 3. **Remoto**: crear el repo (o el fork de `efolchmontiel/gentle-emote`) y
    apuntar `origin`. Decidir si se publica como fork o como repo independiente
    con el crédito en el README.
-4. **Aplicar el audio v2**: aplicar `sounds/aoe/seleccion.json` (portable,
-   solo nombres) a `~/.gentle-shell/config/gentle-ai/notifications.json` con
-   backup. `scripts/select_game.sh aoe` ya hace el backup y escribe las rutas
-   `file:` resolviendo `sounds/aoe/`. Hoy la config viva apunta a `waw/` (v1).
+4. **Audio**: nada para aplicar a mano al pushear. El selector no toca la
+   config global; el hook `session_start` aplica el audio del proyecto al
+   abrir sesión y deja `notifications.baseline.json` con el audio previo.
+   `scripts/apply_sounds.sh` queda para forzar un pack a mano.
 5. **`antigravity-pack/`**: se publica como documentación del pipeline, con el
    `LEEME.md` aclarando que `refs/raw_idle.jpg` no viaja en el repo.
 
