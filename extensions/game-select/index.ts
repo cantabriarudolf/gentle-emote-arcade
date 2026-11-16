@@ -208,22 +208,15 @@ export function copiarPackSprites(arcade: string, proyecto: string, juego: strin
   const origen = join(arcade, "emotes", juego);
   if (!existsSync(origen)) return null;
   const destino = join(proyecto, ".pi", "extensions", "gentle-emote", "emotes", juego);
-  // `emotes.json` es el marcador de pack completo: una copia interrumpida se rehace.
-  if (existsSync(join(destino, "emotes.json"))) return destino;
-  const tmp = `${destino}.tmp-${process.pid}`;
+  if (existsSync(join(destino, MARCA_PACK))) return destino;
   try {
-    mkdirSync(dirname(destino), { recursive: true });
-    if (existsSync(tmp)) rmSync(tmp, { recursive: true, force: true });
-    cpSync(origen, tmp, { recursive: true });
-    if (existsSync(destino)) rmSync(destino, { recursive: true, force: true });
-    renameSync(tmp, destino);
+    // Mezcla en vez de reemplazo: completa lo que falte sin borrar lo que el
+    // usuario haya puesto a mano en ese pack, y nunca deja el dir vacío.
+    mkdirSync(destino, { recursive: true });
+    cpSync(origen, destino, { recursive: true, force: true });
+    writeFileSync(join(destino, MARCA_PACK), "");
     return destino;
   } catch {
-    try {
-      if (existsSync(tmp)) rmSync(tmp, { recursive: true, force: true });
-    } catch {
-      /* nada más que hacer */
-    }
     return null;
   }
 }
@@ -257,6 +250,8 @@ function leerEventos(livePath: string): Record<string, unknown> | null {
 
 /** Cuántos respaldos del archivo vivo se conservan. */
 const RETENER_RESPALDOS = 10;
+/** Marca de pack de sprites copiado completo por este hook. */
+const MARCA_PACK = ".pack-completo";
 
 /** Escribe con tmp + rename: otra sesión puede estar leyendo el archivo. */
 function escribirAtomico(path: string, contenido: string): void {
@@ -271,7 +266,12 @@ function escribirAtomico(path: string, contenido: string): void {
 
 /** Nombre de respaldo único: dos sesiones en el mismo segundo no se pisan. */
 function respaldoUnico(livePath: string): string {
-  const sello = new Date().toISOString().replace(/[:.]/g, "").slice(0, 15);
+  // `YYYYMMDD-HHMMSS`, el mismo formato que reconoce la poda.
+  const sello = new Date()
+    .toISOString()
+    .replace(/\..+$/, "")
+    .replace(/[-:]/g, "")
+    .replace("T", "-");
   let ruta = `${livePath}.bak-${sello}-${process.pid}`;
   let n = 1;
   while (existsSync(ruta)) {
@@ -281,17 +281,32 @@ function respaldoUnico(livePath: string): string {
   return ruta;
 }
 
-/** Deja los últimos `RETENER_RESPALDOS` y borra los más viejos. */
+/**
+ * Deja los `RETENER_RESPALDOS` más nuevos y borra el resto, pero sólo los
+ * nombres que escribe este hook: un respaldo viejo o hecho a mano no se toca,
+ * y el orden lo decide la fecha real del archivo, no el texto del nombre.
+ */
 function podarRespaldos(livePath: string): void {
   try {
     const dir = dirname(livePath);
-    const prefijo = `${basename(livePath)}.bak-`;
-    const todos = readdirSync(dir)
-      .filter((f) => f.startsWith(prefijo) && !f.includes(".tmp-"))
-      .sort();
-    for (const viejo of todos.slice(0, Math.max(0, todos.length - RETENER_RESPALDOS))) {
+    const base = basename(livePath).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const propio = new RegExp(`^${base}\\.bak-\\d{8}-\\d{6}-\\d+(-\\d+)?$`);
+    const candidatos = readdirSync(dir)
+      .filter((f) => propio.test(f))
+      .map((f) => {
+        const ruta = join(dir, f);
+        try {
+          return { ruta, mtime: statSync(ruta).mtimeMs };
+        } catch {
+          return { ruta, mtime: 0 };
+        }
+      })
+      .sort((a, b) => b.mtime - a.mtime);
+    traza(`poda: ${candidatos.length} respaldos propios, retengo ${RETENER_RESPALDOS}`);
+    for (const viejo of candidatos.slice(RETENER_RESPALDOS)) {
       try {
-        unlinkSync(join(dir, viejo));
+        unlinkSync(viejo.ruta);
+        traza(`poda backup ${basename(viejo.ruta)}`);
       } catch {
         /* si no se puede borrar, no rompe el hook */
       }

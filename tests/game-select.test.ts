@@ -850,7 +850,7 @@ test("la retención de respaldos deja los últimos diez", async () => {
   const { comando, manejadores } = await cargarExtension(join(sb.cwd, ".gentle-shell", "agent"));
   const dir = join(sb.cwd, ".gentle-shell", "config", "gentle-ai");
   for (let i = 0; i < 14; i += 1) {
-    writeFileSync(join(dir, `notifications.json.bak-2020010${i % 10}-0000${i % 10}-999-${i}`), "{}");
+    writeFileSync(join(dir, `notifications.json.bak-2020010${i % 10}-00000${i % 10}-999-${i}`), "{}");
   }
   await comando.handler("minecraft --invasividad a", ctxFalso(undefined).ctx);
 
@@ -872,4 +872,39 @@ test("reload aplica el audio igual que startup", async () => {
     /minecraft\/agent-failed\.wav$/,
     "/reload dispara session_start con reason reload",
   );
+});
+
+test("la poda no toca respaldos que no escribió el hook", async () => {
+  const sb = crearSandbox(["minecraft"]);
+  const { comando, manejadores } = await cargarExtension(join(sb.cwd, ".gentle-shell", "agent"));
+  const dir = join(sb.cwd, ".gentle-shell", "config", "gentle-ai");
+  const viejo = join(dir, "notifications.json.bak-20261107-233953");
+  writeFileSync(viejo, "{}");
+  // Ordenan DESPUÉS del viejo: si la poda barre por prefijo, se lo lleva.
+  for (let i = 0; i < 14; i += 1) {
+    writeFileSync(join(dir, `notifications.json.bak-2026123${i % 10}-00000${i % 10}-${1000 + i}`), "{}");
+  }
+
+  await comando.handler("minecraft --invasividad a", ctxFalso(undefined).ctx);
+  await abrirSesion(manejadores);
+
+  assert.equal(existsSync(viejo), true, "un respaldo viejo ajeno al hook no se borra");
+  const propios = readdirSync(dir).filter((f) => /^notifications\.json\.bak-\d{8}-\d{6}-\d+/.test(f));
+  assert.ok(propios.length <= 10, `quedaron ${propios.length} respaldos propios`);
+});
+
+test("un pack existente sin marcador se completa, no se borra", async () => {
+  const sb = crearSandbox(["minecraft"]);
+  mkdirSync(join(sb.arcade, "emotes", "minecraft", "idle"), { recursive: true });
+  writeFileSync(join(sb.arcade, "emotes", "minecraft", "emotes.json"), "{}");
+  writeFileSync(join(sb.arcade, "emotes", "minecraft", "idle", "idle_00.png"), "PNG");
+  const destino = join(sb.cwd, ".pi", "extensions", "gentle-emote", "emotes", "minecraft");
+  mkdirSync(destino, { recursive: true });
+  writeFileSync(join(destino, "curado.txt"), "mío");
+  const { comando } = await cargarExtension(join(sb.cwd, ".gentle-shell", "agent"));
+
+  await comando.handler("minecraft --invasividad a", ctxFalso(undefined).ctx);
+
+  assert.equal(readFileSync(join(destino, "curado.txt"), "utf-8"), "mío", "no borra contenido del usuario");
+  assert.equal(existsSync(join(destino, "emotes.json")), true, "completa el pack que faltaba");
 });
