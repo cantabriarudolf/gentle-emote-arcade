@@ -86,3 +86,7 @@ compartida (el `check_install.sh` lo avisa) y la selección ya no lo usa.
 L9. Verificación final: `node --test tests/game-select.test.ts tests/packs.test.ts`
 52/52. `check_install.sh` queda con 1 drift real: el paquete npm sigue parcheado
 (`MAX_LOG_BYTES`); se arregla con `pi update`, que no corre este corte.
+
+L10. C4: `notifications.json` se escribe con tmp + rename. Dos sesiones en
+proyectos distintos comparten ese archivo (la última que abre manda), así que
+una lectura nunca puede verlo a medio escribir.

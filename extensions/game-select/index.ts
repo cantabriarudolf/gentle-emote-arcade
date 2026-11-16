@@ -1,5 +1,5 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { existsSync, readFileSync, writeFileSync, readdirSync, appendFileSync, statSync, mkdirSync, cpSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync, readdirSync, appendFileSync, statSync, mkdirSync, cpSync, renameSync, unlinkSync } from "node:fs";
 import { join, dirname, basename } from "node:path";
 import { execFile } from "node:child_process";
 
@@ -310,7 +310,14 @@ export function aplicarJuegoDeProyecto(opciones: {
     vivo.audio.events = vivo.audio.events ?? {};
     if (juego) Object.assign(vivo.audio.events, objetivo);
     else vivo.audio.events = { ...objetivo };
-    writeFileSync(livePath, JSON.stringify(vivo, null, 2));
+    // Atómico: otra sesión puede estar leyendo este archivo mientras escribimos.
+    const tmp = `${livePath}.tmp-${process.pid}`;
+    try {
+      writeFileSync(tmp, JSON.stringify(vivo, null, 2));
+      renameSync(tmp, livePath);
+    } finally {
+      if (existsSync(tmp)) unlinkSync(tmp);
+    }
     return { aplicado: true, motivo: juego ? "pack" : "baseline", juego, respaldo };
   } catch {
     return { aplicado: false, motivo: "sin-cambio", juego };
