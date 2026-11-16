@@ -33,6 +33,19 @@ global, y dejar de parchear el paquete npm instalado.
 S5. Los tests corren con `node --test tests/game-select.test.ts` en un sandbox
 temporal y no tocan la config viva ni el audio real.
 
+S6. Saldar los avisos no bloqueantes de la review: «en criollo, si hay algo que
+saldar dale segun tu plan». Reglas derivadas de los advisories, en orden:
+1. Un config que no parsea no se pisa: `setEmoteSet`, el bloque python de
+   `select_game.sh` y la escritura viva del hook dejan el archivo intacto y lo
+   reportan (R3-1, R3-2, R1-corrupt-baseline-wipe).
+2. Los respaldos son atómicos y con nombre único: tmp + rename, sello con ms o
+   sufijo, sin pisar un backup previo (R1-nonatomic-backup, R3-5, R4-2).
+3. Un fallo de escritura tiene motivo propio: no se confunde con `sin-cambio`,
+   y el hook avisa en la UI (R1-silent-apply-failure, R3-3, R4-1).
+4. Retención de respaldos y copy de packs auto-reparable (R4-5, R4-4).
+5. Un test ejercita que `session_start` con `reason: "reload"` aplica el audio
+   (R3-4).
+
 ## Tasks
 
 | ID | Qué | Specs | Ruta | Commit |
@@ -43,6 +56,7 @@ temporal y no tocan la config viva ni el audio real.
 | T4 | Scripts: `select_game.sh` project-only, `apply_sounds.sh` explícito, fuera `patch_debug_log.sh` | S2, S3, S4 | inline | C2 |
 | T5 | Limpieza del lado global en esta máquina (baseline, packs copiados, paquete npm) | S4 | inline | — |
 | T6 | Docs (README, BETA) y verificación final | S1-S5 | inline | C3 |
+| T7 | Saldar los advisories de la review (parseo, respaldos atómicos, fallo visible, retención, test de reload) | S6 | worker | C6 |
 
 Cortes de revisión: C1 = 440 líneas (extensión + tests), C2 = 229 líneas
 (scripts), C3 = docs. Rama `fix/emote-scope`.
@@ -94,3 +108,8 @@ una lectura nunca puede verlo a medio escribir.
 L11. C5: `tests/select-game.test.ts` cubre el selector bash (config, pack y
 mapa por proyecto; dos proyectos sin pisarse; `--dry-run` sin escrituras). Con
 eso el corte de scripts deja de depender de una prueba manual: `Risk: none`.
+
+L12. Review nativa: cerrada y aprobada (lineage `review-1e9f9f92d6fec840`,
+authority burned), 14 advisories informativos, ninguno abre corrección. El
+candado de lineage se resolvió reanudando, sin reset. El humano autorizó
+saldarlos: «en criollo, si hay algo que saldar dale segun tu plan» → T7.

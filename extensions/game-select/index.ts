@@ -1,5 +1,5 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { existsSync, readFileSync, writeFileSync, readdirSync, appendFileSync, statSync, mkdirSync, cpSync, renameSync, unlinkSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync, readdirSync, appendFileSync, statSync, mkdirSync, cpSync, renameSync, unlinkSync, rmSync } from "node:fs";
 import { join, dirname, basename } from "node:path";
 import { execFile } from "node:child_process";
 
@@ -29,7 +29,8 @@ export function setEmoteSet(path: string, juego: string): boolean {
     try {
       data = JSON.parse(readFileSync(path, "utf-8"));
     } catch {
-      data = {};
+      // Un config ilegible es un problema del usuario: no se reemplaza.
+      return false;
     }
   } else {
     try {
@@ -187,7 +188,7 @@ function readProjectEntry(mapPath: string | null, proyecto: string): { juego?: s
 
 export interface ResultadoAplicacion {
   aplicado: boolean;
-  motivo: "sin-arcade" | "sin-pack" | "sin-cambio" | "pack" | "baseline";
+  motivo: "sin-arcade" | "sin-pack" | "sin-cambio" | "pack" | "baseline" | "error";
   juego?: string;
   respaldo?: string;
 }
@@ -207,12 +208,22 @@ export function copiarPackSprites(arcade: string, proyecto: string, juego: strin
   const origen = join(arcade, "emotes", juego);
   if (!existsSync(origen)) return null;
   const destino = join(proyecto, ".pi", "extensions", "gentle-emote", "emotes", juego);
-  if (existsSync(destino)) return destino;
+  // `emotes.json` es el marcador de pack completo: una copia interrumpida se rehace.
+  if (existsSync(join(destino, "emotes.json"))) return destino;
+  const tmp = `${destino}.tmp-${process.pid}`;
   try {
     mkdirSync(dirname(destino), { recursive: true });
-    cpSync(origen, destino, { recursive: true });
+    if (existsSync(tmp)) rmSync(tmp, { recursive: true, force: true });
+    cpSync(origen, tmp, { recursive: true });
+    if (existsSync(destino)) rmSync(destino, { recursive: true, force: true });
+    renameSync(tmp, destino);
     return destino;
   } catch {
+    try {
+      if (existsSync(tmp)) rmSync(tmp, { recursive: true, force: true });
+    } catch {
+      /* nada más que hacer */
+    }
     return null;
   }
 }
@@ -233,12 +244,60 @@ export function eventosVivos(
   return salida;
 }
 
-function leerEventos(livePath: string): Record<string, unknown> {
+/** Eventos del archivo; `null` si existe y no parsea (no se pisa lo ilegible). */
+function leerEventos(livePath: string): Record<string, unknown> | null {
+  if (!existsSync(livePath)) return {};
   try {
     const data = JSON.parse(readFileSync(livePath, "utf-8"));
     return (data?.audio?.events ?? {}) as Record<string, unknown>;
   } catch {
-    return {};
+    return null;
+  }
+}
+
+/** Cuántos respaldos del archivo vivo se conservan. */
+const RETENER_RESPALDOS = 10;
+
+/** Escribe con tmp + rename: otra sesión puede estar leyendo el archivo. */
+function escribirAtomico(path: string, contenido: string): void {
+  const tmp = `${path}.tmp-${process.pid}`;
+  try {
+    writeFileSync(tmp, contenido);
+    renameSync(tmp, path);
+  } finally {
+    if (existsSync(tmp)) unlinkSync(tmp);
+  }
+}
+
+/** Nombre de respaldo único: dos sesiones en el mismo segundo no se pisan. */
+function respaldoUnico(livePath: string): string {
+  const sello = new Date().toISOString().replace(/[:.]/g, "").slice(0, 15);
+  let ruta = `${livePath}.bak-${sello}-${process.pid}`;
+  let n = 1;
+  while (existsSync(ruta)) {
+    ruta = `${livePath}.bak-${sello}-${process.pid}-${n}`;
+    n += 1;
+  }
+  return ruta;
+}
+
+/** Deja los últimos `RETENER_RESPALDOS` y borra los más viejos. */
+function podarRespaldos(livePath: string): void {
+  try {
+    const dir = dirname(livePath);
+    const prefijo = `${basename(livePath)}.bak-`;
+    const todos = readdirSync(dir)
+      .filter((f) => f.startsWith(prefijo) && !f.includes(".tmp-"))
+      .sort();
+    for (const viejo of todos.slice(0, Math.max(0, todos.length - RETENER_RESPALDOS))) {
+      try {
+        unlinkSync(join(dir, viejo));
+      } catch {
+        /* si no se puede borrar, no rompe el hook */
+      }
+    }
+  } catch {
+    /* sin directorio no hay nada que podar */
   }
 }
 
@@ -271,6 +330,8 @@ export function aplicarJuegoDeProyecto(opciones: {
   const invasividad = normalizarInvasividad(String(entry.invasividad ?? ""));
   const baseline = baselinePath(livePath);
   const antes = leerEventos(livePath);
+  // Si el archivo vivo existe y no parsea, escribir encima es peor que no hacer nada.
+  if (antes === null) return { aplicado: false, motivo: "error" };
 
   let objetivo: Record<string, string | null>;
   if (juego) {
@@ -280,7 +341,10 @@ export function aplicarJuegoDeProyecto(opciones: {
     objetivo = eventosVivos(juego, eventos);
   } else {
     if (!existsSync(baseline)) return { aplicado: false, motivo: "sin-cambio" };
-    objetivo = leerEventos(baseline) as Record<string, string | null>;
+    const previo = leerEventos(baseline);
+    // Un baseline ilegible no puede dejar el audio global en silencio.
+    if (previo === null) return { aplicado: false, motivo: "error" };
+    objetivo = previo as Record<string, string | null>;
   }
 
   const claves = [...EVENTOS, "session.shutdown", ...Object.keys(objetivo)];
@@ -291,36 +355,24 @@ export function aplicarJuegoDeProyecto(opciones: {
 
   try {
     mkdirSync(dirname(livePath), { recursive: true });
-    if (!existsSync(baseline) && existsSync(livePath)) {
-      writeFileSync(baseline, readFileSync(livePath, "utf-8"));
-    }
+    const crudo = existsSync(livePath) ? readFileSync(livePath, "utf-8") : "";
+    if (!existsSync(baseline)) escribirAtomico(baseline, crudo.trim() ? crudo : "{}\n");
     let respaldo: string | undefined;
-    if (existsSync(livePath)) {
-      const sello = new Date().toISOString().replace(/[:.]/g, "").slice(0, 15);
-      respaldo = `${livePath}.bak-${sello}`;
-      writeFileSync(respaldo, readFileSync(livePath, "utf-8"));
+    if (crudo.trim()) {
+      respaldo = respaldoUnico(livePath);
+      escribirAtomico(respaldo, crudo);
     }
-    let vivo: any = {};
-    try {
-      vivo = JSON.parse(readFileSync(livePath, "utf-8"));
-    } catch {
-      vivo = {};
-    }
+    const vivo: any = crudo.trim() ? JSON.parse(crudo) : {};
     vivo.audio = vivo.audio ?? {};
     vivo.audio.events = vivo.audio.events ?? {};
     if (juego) Object.assign(vivo.audio.events, objetivo);
     else vivo.audio.events = { ...objetivo };
-    // Atómico: otra sesión puede estar leyendo este archivo mientras escribimos.
-    const tmp = `${livePath}.tmp-${process.pid}`;
-    try {
-      writeFileSync(tmp, JSON.stringify(vivo, null, 2));
-      renameSync(tmp, livePath);
-    } finally {
-      if (existsSync(tmp)) unlinkSync(tmp);
-    }
+    escribirAtomico(livePath, JSON.stringify(vivo, null, 2));
+    podarRespaldos(livePath);
     return { aplicado: true, motivo: juego ? "pack" : "baseline", juego, respaldo };
   } catch {
-    return { aplicado: false, motivo: "sin-cambio", juego };
+    // Distinto de "sin-cambio": acá hubo un fallo real y el hook lo avisa.
+    return { aplicado: false, motivo: "error", juego };
   }
 }
 
@@ -631,7 +683,7 @@ export default function (pi: ExtensionAPI) {
   };
 
   // "✓ New session started": frase icónica del pack, sólo en sesión nueva.
-  pi.on?.("session_start", async (event: any) => {
+  pi.on?.("session_start", async (event: any, ctx: any) => {
     // El audio global es uno solo para todas las sesiones: al abrir se aplica el
     // juego de ESTE proyecto, o se vuelve al audio previo si no eligió ninguno.
     if (home) {
@@ -641,6 +693,13 @@ export default function (pi: ExtensionAPI) {
         `hook audio -> ${resultado.motivo}${resultado.juego ? ` ${resultado.juego}` : ""}` +
           `${resultado.respaldo ? ` (backup ${basename(resultado.respaldo)})` : ""}`,
       );
+      if (resultado.motivo === "error") {
+        ctx?.ui?.notify?.(
+          "[juego] no pude aplicar el audio de este proyecto: revisá " +
+            "~/.gentle-shell/config/gentle-ai/notifications.json y su baseline.",
+          "warning",
+        );
+      }
     }
     const reason = event?.reason;
     if (reason !== "new") return;
@@ -755,7 +814,13 @@ export default function (pi: ExtensionAPI) {
       // elegir acá no le cambia el arte ni el audio a los demás proyectos.
       const spritesJuego = juego === "misc" ? "aoe" : juego;
       if (!opciones.dryRun) {
-        setEmoteSet(configs[1], spritesJuego);
+        if (!setEmoteSet(configs[1], spritesJuego)) {
+          ctx.ui?.notify?.(
+            `[juego] no pude escribir ${configs[1]}: revisá que sea JSON válido. ` +
+              `El juego quedó guardado para el audio, pero el sprite no cambió.`,
+            "warning",
+          );
+        }
         if (arcade) copiarPackSprites(arcade, opciones.proyecto, spritesJuego);
         guardarProyecto(mapPath, opciones.proyecto, { juego, invasividad });
       }

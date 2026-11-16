@@ -664,11 +664,15 @@ test("el Enter rota solo con el pack gentle", async () => {
   assert.match(jugados.at(-1) ?? "", /gentle\/a-ver\.wav$/);
 });
 
-/** Dispara el hook de inicio de sesion sin audio: `startup` no saluda. */
-async function abrirSesion(manejadores: Map<string, any>) {
+/** Dispara el hook de inicio de sesión sin audio: `startup` no saluda. */
+async function abrirSesion(
+  manejadores: Map<string, any>,
+  ctx: any = { ui: { notify: () => {} } },
+  reason = "startup",
+) {
   const hook = manejadores.get("session_start");
   assert.equal(typeof hook, "function", "la extension debe escuchar session_start");
-  await hook({ reason: "startup" }, { ui: { notify: () => {} } });
+  await hook({ reason }, ctx);
 }
 
 const MAPA = (cwd: string) => join(cwd, ".pi", "extensions", "game-select", "projects.json");
@@ -781,4 +785,91 @@ test("un pack que no existe no deja la sesion muda por accidente", async () => {
 
   assert.equal(readFileSync(sb.live, "utf-8"), antes, "sin pack no se toca el audio global");
   assert.equal(respaldos(sb.cwd), 0, "y no deja backup de algo que no aplicó");
+});
+
+// --- T7: saldar los advisories de la review (S6) ---
+
+test("un config vivo ilegible no se pisa y el hook avisa", async () => {
+  const sb = crearSandbox(["minecraft"]);
+  const { comando, manejadores } = await cargarExtension(join(sb.cwd, ".gentle-shell", "agent"));
+  await comando.handler("minecraft --invasividad a", ctxFalso(undefined).ctx);
+  writeFileSync(sb.live, "{ roto");
+  const { ctx, avisos } = ctxFalso(undefined);
+
+  await abrirSesion(manejadores, ctx);
+
+  assert.equal(readFileSync(sb.live, "utf-8"), "{ roto", "no debe reemplazar un archivo ilegible");
+  assert.ok(avisos.some((a) => a.tipo === "warning"), "el hook tiene que avisar el fallo");
+});
+
+test("un config de proyecto ilegible no se pisa", async () => {
+  const sb = crearSandbox(["aoe"]);
+  const { comando } = await cargarExtension(join(sb.cwd, ".gentle-shell", "agent"));
+  writeFileSync(sb.projectConfig, "{ roto");
+
+  const { ctx, avisos } = ctxFalso(undefined);
+  await comando.handler("aoe --invasividad a", ctx);
+
+  assert.equal(readFileSync(sb.projectConfig, "utf-8"), "{ roto");
+  assert.ok(avisos.some((a) => a.tipo === "warning" && /JSON válido/.test(a.mensaje)), "tiene que avisar");
+});
+
+test("dos sesiones en el mismo segundo no se pisan el respaldo", async () => {
+  const sb = crearSandbox(["minecraft", "aoe"]);
+  const { comando, manejadores } = await cargarExtension(join(sb.cwd, ".gentle-shell", "agent"));
+  const mapaPath = MAPA(sb.cwd);
+  await comando.handler("minecraft --invasividad a", ctxFalso(undefined).ctx);
+  await abrirSesion(manejadores);
+  const mapa = JSON.parse(readFileSync(mapaPath, "utf-8"));
+  mapa[sb.cwd] = { juego: "aoe", invasividad: "todo" };
+  writeFileSync(mapaPath, JSON.stringify(mapa));
+
+  await abrirSesion(manejadores);
+
+  const bs = readdirSync(join(sb.cwd, ".gentle-shell", "config", "gentle-ai"))
+    .filter((f) => f.startsWith("notifications.json.bak-"));
+  assert.equal(bs.length, 2, "cada aplicación deja su respaldo");
+  assert.equal(new Set(bs).size, 2, "con nombres distintos, sin pisarse");
+});
+
+test("un baseline ilegible no vacía el audio global", async () => {
+  const sb = crearSandbox(["minecraft"]);
+  const { manejadores } = await cargarExtension(join(sb.cwd, ".gentle-shell", "agent"));
+  mkdirSync(join(sb.cwd, ".pi", "extensions", "game-select"), { recursive: true });
+  writeFileSync(MAPA(sb.cwd), JSON.stringify({ "/tmp/otro": { juego: "aoe", invasividad: "todo" } }));
+  writeFileSync(join(sb.cwd, ".gentle-shell", "config", "gentle-ai", "notifications.baseline.json"), "{ roto");
+  const antes = readFileSync(sb.live, "utf-8");
+
+  await abrirSesion(manejadores);
+
+  assert.equal(readFileSync(sb.live, "utf-8"), antes, "no debe asignar un evento vacío");
+});
+
+test("la retención de respaldos deja los últimos diez", async () => {
+  const sb = crearSandbox(["minecraft"]);
+  const { comando, manejadores } = await cargarExtension(join(sb.cwd, ".gentle-shell", "agent"));
+  const dir = join(sb.cwd, ".gentle-shell", "config", "gentle-ai");
+  for (let i = 0; i < 14; i += 1) {
+    writeFileSync(join(dir, `notifications.json.bak-2020010${i % 10}-0000${i % 10}-999-${i}`), "{}");
+  }
+  await comando.handler("minecraft --invasividad a", ctxFalso(undefined).ctx);
+
+  await abrirSesion(manejadores);
+
+  const bs = readdirSync(dir).filter((f) => f.startsWith("notifications.json.bak-"));
+  assert.ok(bs.length <= 10, `quedaron ${bs.length} respaldos`);
+});
+
+test("reload aplica el audio igual que startup", async () => {
+  const sb = crearSandbox(["minecraft"]);
+  const { comando, manejadores } = await cargarExtension(join(sb.cwd, ".gentle-shell", "agent"));
+  await comando.handler("minecraft --invasividad a", ctxFalso(undefined).ctx);
+
+  await abrirSesion(manejadores, { ui: { notify: () => {} } }, "reload");
+
+  assert.match(
+    JSON.parse(readFileSync(sb.live, "utf-8")).audio.events["agent.failed"],
+    /minecraft\/agent-failed\.wav$/,
+    "/reload dispara session_start con reason reload",
+  );
 });

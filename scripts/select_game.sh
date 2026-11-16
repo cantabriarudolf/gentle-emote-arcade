@@ -111,8 +111,10 @@ if os.path.isfile(config):
     try:
         with open(config, encoding="utf-8") as fh:
             d = json.load(fh)
-    except Exception:
-        d = {}
+    except Exception as exc:
+        # Un config ilegible es del usuario: no se reemplaza por uno vacío.
+        sys.stderr.write("config del proyecto ilegible (%s): %s\n" % (config, exc))
+        raise SystemExit(2)
 deseado = [{"model": "*", "emote-set": sprites}]
 if d.get("emotes") == deseado:
     print("sprites: ya en %s (%s)" % (sprites, config))

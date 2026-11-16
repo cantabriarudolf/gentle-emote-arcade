@@ -71,3 +71,16 @@ test("--dry-run no escribe config, ni pack, ni mapa", () => {
   assert.equal(existsSync(join(sb.proyecto, ".pi")), false, "no crea el .pi del proyecto");
   assert.deepEqual(JSON.parse(readFileSync(sb.mapa, "utf-8")), {}, "no escribe el mapa");
 });
+
+test("un config del proyecto ilegible no se pisa", () => {
+  const sb = sandbox();
+  const dir = join(sb.proyecto, ".pi", "extensions", "gentle-emote");
+  mkdirSync(dir, { recursive: true });
+  const config = join(dir, "config.json");
+  writeFileSync(config, "{ roto");
+
+  assert.throws(() => correr(["minecraft", "--proyecto", sb.proyecto], sb), "el script tiene que fallar");
+
+  assert.equal(readFileSync(config, "utf-8"), "{ roto");
+  assert.deepEqual(JSON.parse(readFileSync(sb.mapa, "utf-8")), {}, "no escribe el mapa si no pudo escribir el config");
+});
